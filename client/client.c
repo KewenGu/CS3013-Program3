@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define END_OF_PHOTO 0xAC
+
 typedef struct frameData {
 
 	char seqNum[2];
@@ -34,5 +36,19 @@ int main(int argc, char** argv) {
 
 	//Pointer to socket structure that ends up filled in by gethostbyname
   	struct hostent *servHost;
+  	struct sockaddr_in serverAddress;
+  	unsigned short port = 5280;
+
+  	servHost = gethostbyname(argv[1]);
+
+  	//Reset the echoServAddr struct
+  	memset(&serverAddress, 0, sizeof(serverAddress));
+  	serverAddress.sin_family = AF_INET;
+
+  	//Copy the address from the gethostbyname struct into echoServAddr
+  	memcpy(&serverAddress.sin_addr.s_addr, servHost->h_addr_list[0], servHost->h_length);
+
+  	//Convert the provided port to network byte order and assign to echoServAddr
+  	serverAddress.sin_port = htons(port);
 
 }
