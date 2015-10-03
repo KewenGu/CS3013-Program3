@@ -9,7 +9,11 @@
 
 #include "client.h"
 
-#define END_OF_PHOTO 0xAC
+#define END_OF_PHOTO_YES 0xAC
+#define END_OF_PHOTO_NO 0xAD
+
+#define END_OF_PACKET_YES 0xAE
+#define END_OF_PACKET_NO 0xAF
 
 int main(int argc, char** argv) {
 
@@ -20,13 +24,33 @@ int main(int argc, char** argv) {
 
 	}
 
+	int clientID = atoi(argv[2]);
+	int num_photos = atoi(argv[3]);
+
 	//Pointer to socket structure that ends up filled in by gethostbyname
   	struct hostent *servHost;
   	
   	unsigned short port = 5280;
   	servHost = gethostbyname(argv[1]);
 
-  	int sock = physical_Establish(servHost, port);
+  	//int sock = physical_Establish(servHost, port);
+
+  	//Packet formation
+  	for(int i = 0; i < num_photos; i++) {
+
+  		char filename[255];
+  		sprintf(filename, "photo%d%d.jpg", clientID, i);
+
+
+  		FILE *file;
+  		file = fopen(filename, "r");
+  		if(file == NULL) {
+  			fprintf(stderr, "%s couldn't be found!\n", filename);
+  			exit(1);
+  		}
+
+
+  	}
 
 
 

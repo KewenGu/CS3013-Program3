@@ -4,7 +4,7 @@ typedef struct frameData {
 	char *payload; //somewhere between 1 and 130 bytes
 
 	char errorDetect[2];
-	char eop; //end-of-packet byte
+	char endOfPacket;
 
 } frame;
 
@@ -14,5 +14,12 @@ typedef struct frameACK {
 	char errorDetect[2];
 
 } frameACK;
+
+typedef struct packet {
+
+	char *data;
+	char endOfPhoto;
+
+} packet;
 
 int physical_Establish(struct hostent* host, unsigned short port);
