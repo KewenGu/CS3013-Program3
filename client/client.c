@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
 	//Pointer to socket structure that ends up filled in by gethostbyname
   	struct hostent *servHost;
   	
-  	unsigned short port = 5280;
+  	unsigned short port = WELLKNOWNPORT;
   	servHost = gethostbyname(argv[1]);
 
   	//int sock = physical_Establish(servHost, port);
@@ -56,11 +56,20 @@ int main(int argc, char** argv) {
 
 }
 
+
+void DieWithError(char *errorMsg)
+{
+  perror(errorMsg);
+  exit(1);
+}
+
+
 int physical_Establish(struct hostent* host, unsigned short port) {
 
 	struct sockaddr_in serverAddress;
+  int sock;
 
-	 //Reset the struct
+	  //Reset the struct
   	memset(&serverAddress, 0, sizeof(serverAddress));
   	serverAddress.sin_family = AF_INET;
 
@@ -70,13 +79,15 @@ int physical_Establish(struct hostent* host, unsigned short port) {
   	//Convert the provided port to network byte order and assign to struct
   	serverAddress.sin_port = htons(port);
 
-	int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    DieWithError("sock() failed");
 
-	if(connect(sock, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) {
-    	printf("connect() failed\n");
-    	exit(1);
-  	}
+	if(connect(sock, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) 
+    DieWithError("connect() failed");
 
   	return sock;
 
 }
+
+
+

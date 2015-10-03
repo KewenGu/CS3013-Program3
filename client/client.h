@@ -1,3 +1,6 @@
+
+#define WELLKNOWNPORT 5280
+
 typedef struct frameData {
 
 	char seqNum[2];
@@ -15,11 +18,16 @@ typedef struct frameACK {
 
 } frameACK;
 
+
 typedef struct packet {
 
 	char *data;
 	char endOfPhoto;
 
 } packet;
+
+
+
+void DieWithError(char *errorMsg);
 
 int physical_Establish(struct hostent* host, unsigned short port);
