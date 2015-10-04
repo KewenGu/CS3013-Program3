@@ -1,25 +1,25 @@
 typedef struct frameData {
 
 	char seqNum[2];
-	char *payload; //somewhere between 1 and 130 bytes
+	void *payload; //somewhere between 1 and 130 bytes
 
 	char errorDetect[2];
 	char endOfPacket;
 
-} frame;
+} Frame;
 
 typedef struct frameACK {
 
 	char seqNum[2];
 	char errorDetect[2];
 
-} frameACK;
+} FrameACK;
 
 typedef struct packet {
 
-	char *data;
+	char data[256];
 	char endOfPhoto;
 
-} packet;
+} Packet;
 
 int physical_Establish(struct hostent* host, unsigned short port);

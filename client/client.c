@@ -9,6 +9,8 @@
 
 #include "client.h"
 
+#define PACKET_SIZE 256
+
 #define END_OF_PHOTO_YES 0xAC
 #define END_OF_PHOTO_NO 0xAD
 
@@ -35,23 +37,65 @@ int main(int argc, char** argv) {
 
   	//int sock = physical_Establish(servHost, port);
 
-  	//Packet formation
+  	int total_size = 0;
+  	int sizes[num_photos];
+
+  	//Packet memory allocation. First make space, then we can do the math for the packets easier
   	for(int i = 0; i < num_photos; i++) {
 
   		char filename[255];
   		sprintf(filename, "photo%d%d.jpg", clientID, i);
 
-
   		FILE *file;
-  		file = fopen(filename, "r");
+  		file = fopen(filename, "rb");
   		if(file == NULL) {
   			fprintf(stderr, "%s couldn't be found!\n", filename);
   			exit(1);
   		}
 
+  		fseek(file, 0, SEEK_END);
+  		total_size += ftell(file);
+  		sizes[i] = ftell(file);
 
+  		fclose(file);
   	}
 
+  	int num_packets = (total_size / PACKET_SIZE) + (total_size % PACKET_SIZE > 0 ? 1 : 0);
+
+  	//Take in the jpg data
+  	Packet *packets = (Packet *)malloc(num_packets * sizeof(Packet));
+
+  	int current_packet = 0;
+  	int current_position = 0;
+  	int totalBytesLoaded = 0;
+
+  	for(int i = 0; i < num_photos; i++) {
+
+  		char filename[255];
+  		sprintf(filename, "photo%d%d.jpg", clientID, i);
+
+  		FILE *file;
+  		file = fopen(filename, "rb");
+  		if(file == NULL) {
+  			fprintf(stderr, "%s couldn't be found!\n", filename);
+  			exit(1);
+  		}
+
+  		int bytesLoaded = sizes[i];
+
+  		while(bytesLoaded > 0) {
+  			fread(packets[current_packet].data+current_position, 1, 1, file);
+
+  			current_position++;
+  			bytesLoaded--;
+
+  			if(current_position == PACKET_SIZE) {
+  				current_position = 0;
+  				current_packet++;
+  			}
+  		}
+  		
+  	}
 
 
 }
