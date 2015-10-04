@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 
   	int total_size = 0;
   	int sizes[num_photos];
-
+/*
   	//Packet memory allocation. First make space, then we can do the math for the packets easier
   	for(int i = 0; i < num_photos; i++) {
 
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 
   		fclose(file);
   	}
-
+*/
   	int num_packets = (total_size / PACKET_SIZE) + (total_size % PACKET_SIZE > 0 ? 1 : 0);
 
   	//Take in the jpg data
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 
   		char filename[255];
   		sprintf(filename, "photo%d%d.jpg", clientID, i);
-
+      // Open the JPEG file for reading
   		FILE *file;
   		file = fopen(filename, "rb");
   		if(file == NULL) {
@@ -81,18 +81,26 @@ int main(int argc, char** argv) {
   			exit(1);
   		}
 
+      /* ====== What do you think? Is this also valid? ====== */
+      fseek(file, 0, SEEK_END);
+      total_size += ftell(file);
+      sizes[i] = ftell(file);
   		int bytesLoaded = sizes[i];
+      /* ==================================================== */
 
   		while(bytesLoaded > 0) {
+        // Read from JPEG file one byte at a time
   			fread(packets[current_packet].data+current_position, 1, 1, file);
 
   			current_position++;
   			bytesLoaded--;
-
+        // Start filling a new packet after PACKET_SIZE bytes read
   			if(current_position == PACKET_SIZE) {
   				current_position = 0;
   				current_packet++;
   			}
+
+        fclose(file);
   		}
   		
   	}
