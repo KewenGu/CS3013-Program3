@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 
   	int total_size = 0;
   	int sizes[num_photos];
-/*
+
   	//Packet memory allocation. First make space, then we can do the math for the packets easier
   	for(int i = 0; i < num_photos; i++) {
 
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 
   		fclose(file);
   	}
-*/
+
   	int num_packets = (total_size / PACKET_SIZE) + (total_size % PACKET_SIZE > 0 ? 1 : 0);
 
   	//Take in the jpg data
@@ -81,12 +81,7 @@ int main(int argc, char** argv) {
   			exit(1);
   		}
 
-      /* ====== What do you think? Is this also valid? ====== */
-      fseek(file, 0, SEEK_END);
-      total_size += ftell(file);
-      sizes[i] = ftell(file);
   		int bytesLoaded = sizes[i];
-      /* ==================================================== */
 
   		while(bytesLoaded > 0) {
         // Read from JPEG file one byte at a time
@@ -99,8 +94,6 @@ int main(int argc, char** argv) {
   				current_position = 0;
   				current_packet++;
   			}
-
-        fclose(file);
   		}
   		
   	}

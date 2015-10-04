@@ -5,10 +5,9 @@ typedef struct frameData {
 
 	char seqNum[2];
 	void *payload; //somewhere between 1 and 130 bytes
-
+	char endOfPacket; // end-of-packet byte should be after the payload/packet
 	char errorDetect[2];
-	char endOfPacket;
-
+	
 } Frame;
 
 typedef struct frameACK {
