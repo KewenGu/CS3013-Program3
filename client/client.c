@@ -10,6 +10,7 @@
 #include "client.h"
 
 #define PACKET_SIZE 256
+#define FRAME_PAYLOAD_SIZE 130
 
 #define END_OF_PHOTO_YES 0xAC
 #define END_OF_PHOTO_NO 0xAD
@@ -89,12 +90,26 @@ int main(int argc, char** argv) {
 
   			current_position++;
   			bytesLoaded--;
+        totalBytesLoaded++;
         // Start filling a new packet after PACKET_SIZE bytes read
   			if(current_position == PACKET_SIZE) {
   				current_position = 0;
+          packets[current_packet].endOfPhoto = END_OF_PACKET_NO; // Indicate not end-of-photo
   				current_packet++;
   			}
   		}
+
+      packets[current_packet].endOfPhoto = END_OF_PACKET_YES; // Indicate end-of-photo
+      current_packet++;
+
+      
+
+      // Put the payload into the frame
+      // First, initialize the frame
+      int num_frames = (total_size / FRAME_PAYLOAD_SIZE) + (total_size % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
+      Frame *frames = (Frame *)malloc(num_frames * sizeof(Frame));
+      
+
   		
   	}
 
