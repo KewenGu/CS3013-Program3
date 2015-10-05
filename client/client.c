@@ -12,11 +12,11 @@
 #define PACKET_SIZE 256
 #define FRAME_PAYLOAD_SIZE 130
 
-#define END_OF_PHOTO_YES 0xAC
-#define END_OF_PHOTO_NO 0xAD
+#define END_OF_PHOTO_YES (char)4   // end of transmission
+#define END_OF_PHOTO_NO (char)3    // end of text
 
-#define END_OF_PACKET_YES 0xAE
-#define END_OF_PACKET_NO 0xAF
+#define END_OF_PACKET_YES (char)4  // end of transmission
+#define END_OF_PACKET_NO (char)3   // end of text
 
 int main(int argc, char** argv) {
 
@@ -29,6 +29,7 @@ int main(int argc, char** argv) {
 
 	int clientID = atoi(argv[2]);
 	int num_photos = atoi(argv[3]);
+  int i, j, k;
 
 	//Pointer to socket structure that ends up filled in by gethostbyname
   	struct hostent *servHost;
@@ -94,23 +95,17 @@ int main(int argc, char** argv) {
         // Start filling a new packet after PACKET_SIZE bytes read
   			if(current_position == PACKET_SIZE) {
   				current_position = 0;
-          packets[current_packet].endOfPhoto = END_OF_PACKET_NO; // Indicate not end-of-photo
+          packets[current_packet].endOfPhoto = END_OF_PHOTO_NO; // Indicate not end-of-photo
   				current_packet++;
   			}
   		}
 
-      packets[current_packet].endOfPhoto = END_OF_PACKET_YES; // Indicate end-of-photo
+      packets[current_packet].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
       current_packet++;
 
       
 
-      // Put the payload into the frame
-      // First, initialize the frame
-      int num_frames = (total_size / FRAME_PAYLOAD_SIZE) + (total_size % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
-      Frame *frames = (Frame *)malloc(num_frames * sizeof(Frame));
-      
 
-  		
   	}
 
 
@@ -147,6 +142,43 @@ int physical_Establish(struct hostent* host, unsigned short port) {
 
   	return sock;
 
+}
+
+// Put the payload into the frame
+void packet_to_frame(Packet *p, int seq_num)
+{
+  // First, initialize the frame
+  int packetSize = sizeof(&p)
+  int num_frames = (packetSize / FRAME_PAYLOAD_SIZE) + (packetSize % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
+  Frame *frames = (Frame *)malloc(num_frames * sizeof(Frame));
+  int i, count = 0;
+  int current_frame = 0;
+  int bytesFramed = 0;
+  int totalBytesFramed = 0;
+
+  // Copy the packet into the frame payload
+  while(totalBytesFramed < packetSize)
+  {
+    for(i = 0; i < FRAME_PAYLOAD_SIZE; i++)
+    {
+      frames[current_frame].payload[i] = (unsigned char *)(&p)[count];
+      bytesFramed++;
+      count++;
+      // If reach the end-of-photo specifier
+      if(frames[current_frame].payload[i] == END_OF_PHOTO_YES || frames[current_frame].payload[i] == END_OF_PHOTO_NO)
+      {  
+        frames[current_frame].endOfPacket = END_OF_PACKET_YES;
+        break;
+      }
+    }
+    frames[current_frame].seqNum = seq_num;
+    frames[current_frame].endOfPacket = END_OF_PACKET_NO;
+    frames[current_frame].errorDetect = error_handling(frames[current_frame].payload);
+    current_frame++;
+  }
+
+  
+  
 }
 
 
