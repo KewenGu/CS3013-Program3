@@ -148,7 +148,7 @@ int physical_Establish(struct hostent* host, unsigned short port) {
 void packet_to_frame(Packet *p, int seq_num)
 {
   // First, initialize the frame
-  int packetSize = sizeof(&p)
+  int packetSize = sizeof(*p);
   int num_frames = (packetSize / FRAME_PAYLOAD_SIZE) + (packetSize % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
   Frame *frames = (Frame *)malloc(num_frames * sizeof(Frame));
   int i, count = 0;
@@ -171,9 +171,18 @@ void packet_to_frame(Packet *p, int seq_num)
         break;
       }
     }
-    frames[current_frame].seqNum = seq_num;
+
+    frames[current_frame].seqNum[0] = seq_num & 0x00ff;
+    frames[current_frame].seqNum[1] = seq_num & 0xff00;
+
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
-    frames[current_frame].errorDetect = error_handling(frames[current_frame].payload);
+
+    int error_handling_result = error_handling(frames[current_frame].payload);
+
+    frames[current_frame].errorDetect[0] = error_handling_result & 0x00ff;
+    frames[current_frame].errorDetect[1] = error_handling_result & 0xff00;
+
+
     current_frame++;
   }
 
