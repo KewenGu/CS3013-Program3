@@ -18,6 +18,8 @@
 #define END_OF_PACKET_YES (char)4  // end of transmission
 #define END_OF_PACKET_NO (char)3   // end of text
 
+unsigned short seq_num = 0;
+
 int main(int argc, char** argv) {
 
 	if(argc != 4) {
@@ -144,7 +146,7 @@ int physical_Establish(struct hostent* host, unsigned short port) {
 }
 
 // Put the payload into the frame
-void datalink_Layer(Packet *p, unsigned short seq_num, int sock)
+void datalink_Layer(Packet *p, int sock)
 {
   // First, initialize the frame
   int packetSize = sizeof(*p);
@@ -174,6 +176,8 @@ void datalink_Layer(Packet *p, unsigned short seq_num, int sock)
 
     frames[current_frame].seqNum[0] = seq_num & 0x00ff;
     frames[current_frame].seqNum[1] = seq_num & 0xff00;
+
+    seq_num++;
 
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
 
