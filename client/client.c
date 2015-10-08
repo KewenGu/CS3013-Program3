@@ -145,7 +145,7 @@ int physical_Establish(struct hostent* host, unsigned short port) {
 }
 
 // Put the payload into the frame
-void packet_to_frame(Packet *p, int seq_num)
+void packet_to_frame(Packet *p, unsigned short seq_num)
 {
   // First, initialize the frame
   int packetSize = sizeof(*p);
@@ -159,6 +159,7 @@ void packet_to_frame(Packet *p, int seq_num)
   // Copy the packet into the frame payload
   while(totalBytesFramed < packetSize)
   {
+    bytesFramed = 0
     for(i = 0; i < FRAME_PAYLOAD_SIZE; i++)
     {
       frames[current_frame].payload[i] = (unsigned char *)(&p)[count];
@@ -177,7 +178,7 @@ void packet_to_frame(Packet *p, int seq_num)
 
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
 
-    int error_handling_result = error_handling(frames[current_frame].payload);
+    unsigned char* error_handling_result = error_handling(frames[current_frame], bytesFramed);
 
     frames[current_frame].errorDetect[0] = error_handling_result & 0x00ff;
     frames[current_frame].errorDetect[1] = error_handling_result & 0xff00;
@@ -185,10 +186,25 @@ void packet_to_frame(Packet *p, int seq_num)
 
     current_frame++;
   }
-
-  
-  
 }
 
+/* Function generates the error detection bytes
+    how this work?
+        suppose the frame in hex representation is "00 01 02 03 04 05 06 07... [2 error detection bytes]"
+        then, error detection bytes = 00^02^04^06... + 01^03^05^07...  (^ is the operation of XOR, + is the operation of concatenation)
+*/
+unsigned char* error_handling(Frame t, int size)
+{
+  int i;
+  unsigned char result[2];
+
+  for (i = 0; i < (size - 2); i += 2)
+    result[0] = (unsigned char *)t[i] ^ result[0];
+
+  for (i = 1; i < (size - 2); i += 2)
+    result[1] = (unsigned char *)t[i] ^ result[1];
+
+  return result;
+}
 
 
