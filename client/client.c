@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
       packets[current_packet].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
       current_packet++;
 
-      datalink_Layer(packets[current_packet], seq_num);
+      datalink_Layer(&packets[current_packet], seq_num);
 
   	}
 
@@ -160,7 +160,7 @@ void datalink_Layer(Packet *p, int sock)
   // Copy the packet into the frame payload
   while(totalBytesFramed < packetSize)
   {
-    bytesFramed = 0
+    bytesFramed = 0;
     for(i = 0; i < FRAME_PAYLOAD_SIZE; i++)
     {
       frames[current_frame].payload[i] = (unsigned char *)(&p)[count];
@@ -181,12 +181,12 @@ void datalink_Layer(Packet *p, int sock)
 
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
 
-    unsigned char* error_handling_result = error_handling(frames[current_frame], bytesFramed);
+    unsigned char error_handling_result = error_handling(frames[current_frame], bytesFramed);
 
     frames[current_frame].errorDetect[0] = error_handling_result & 0x00ff;
     frames[current_frame].errorDetect[1] = error_handling_result & 0xff00;
 
-    physical_Send(sock, &frames[current_frame], bytesFrames+5, frameSize);
+    physical_Send(sock, &frames[current_frame], bytesFramed+5, frameSize);
 
     current_frame++;
   }
@@ -199,7 +199,7 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
   FD_SET(sock, &fileDescriptorSet);
 
 
-  if(send(sock, frames[current_frame], bytesFramed + 5, 0) != frameSize) 
+  if(send(sock, buffer, length, 0) != frameSize) 
       DieWithError("send() error");
 
     struct timeval timer_length;
@@ -217,7 +217,7 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
         suppose the frame in hex representation is "00 01 02 03 04 05 06 07... [2 error detection bytes]"
         then, error detection bytes = 00^02^04^06... + 01^03^05^07...  (^ is the operation of XOR, + is the operation of concatenation)
 */
-unsigned char* error_handling(Frame t, int size)
+unsigned char* error_handling(Frame* t, int size)
 {
   int i;
   unsigned char result[2];
