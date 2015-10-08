@@ -103,8 +103,7 @@ int main(int argc, char** argv) {
       packets[current_packet].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
       current_packet++;
 
-      
-
+      datalink_Layer(packets[current_packet], seq_num);
 
   	}
 
@@ -145,7 +144,7 @@ int physical_Establish(struct hostent* host, unsigned short port) {
 }
 
 // Put the payload into the frame
-void packet_to_frame(Packet *p, unsigned short seq_num)
+void datalink_Layer(Packet *p, unsigned short seq_num, int sock)
 {
   // First, initialize the frame
   int packetSize = sizeof(*p);
@@ -183,6 +182,8 @@ void packet_to_frame(Packet *p, unsigned short seq_num)
     frames[current_frame].errorDetect[0] = error_handling_result & 0x00ff;
     frames[current_frame].errorDetect[1] = error_handling_result & 0xff00;
 
+    if(send(sock, frames[current_frame], bytesFramed + 5, 0) != frameSize) 
+      DieWithError("send() error");
 
     current_frame++;
   }
