@@ -186,11 +186,30 @@ void datalink_Layer(Packet *p, int sock)
     frames[current_frame].errorDetect[0] = error_handling_result & 0x00ff;
     frames[current_frame].errorDetect[1] = error_handling_result & 0xff00;
 
-    if(send(sock, frames[current_frame], bytesFramed + 5, 0) != frameSize) 
-      DieWithError("send() error");
+    physical_Send(sock, &frames[current_frame], bytesFrames+5, frameSize);
 
     current_frame++;
   }
+}
+
+void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
+
+  fd_set fileDescriptorSet;
+  FD_ZERO(&fileDescriptorSet);
+  FD_SET(sock, &fileDescriptorSet);
+
+
+  if(send(sock, frames[current_frame], bytesFramed + 5, 0) != frameSize) 
+      DieWithError("send() error");
+
+    struct timeval timer_length;
+    timer_length.tv_sec = 3;
+    timer_length.tv_usec = 0;
+
+    //Frame timer
+    select(sock + 1, &fileDescriptorSet, NULL, NULL, &timer_length);
+
+    
 }
 
 /* Function generates the error detection bytes
