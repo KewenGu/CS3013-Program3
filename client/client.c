@@ -12,11 +12,11 @@
 #define PACKET_SIZE 256
 #define FRAME_PAYLOAD_SIZE 130
 
-#define END_OF_PHOTO_YES (char)4   // end of transmission
-#define END_OF_PHOTO_NO (char)3    // end of text
+#define END_OF_PHOTO_YES ((char)4)   // end of transmission
+#define END_OF_PHOTO_NO ((char)3)    // end of text
 
-#define END_OF_PACKET_YES (char)4  // end of transmission
-#define END_OF_PACKET_NO (char)3   // end of text
+#define END_OF_PACKET_YES ((char)4)  // end of transmission
+#define END_OF_PACKET_NO ((char)3)   // end of text
 
 unsigned short seq_num = 0;
 
@@ -209,7 +209,7 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
     //Frame timer
     select(sock + 1, &fileDescriptorSet, NULL, NULL, &timer_length);
 
-    
+
 }
 
 /* Function generates the error detection bytes
