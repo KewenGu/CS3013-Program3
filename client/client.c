@@ -103,9 +103,12 @@ int main(int argc, char** argv) {
   		}
 
       packets[current_packet].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
-      current_packet++;
-
+      
       datalink_Layer(&packets[current_packet], seq_num);
+
+
+
+      current_packet++;
 
   	}
 
@@ -181,10 +184,10 @@ void datalink_Layer(Packet *p, int sock)
 
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
 
-    unsigned char error_handling_result = error_handling(frames[current_frame], bytesFramed);
+    unsigned char *error_handling_result = error_handling(frames[current_frame], bytesFramed);
 
-    frames[current_frame].errorDetect[0] = error_handling_result & 0x00ff;
-    frames[current_frame].errorDetect[1] = error_handling_result & 0xff00;
+    frames[current_frame].errorDetect[0] = error_handling_result[0];
+    frames[current_frame].errorDetect[1] = error_handling_result[1];
 
     physical_Send(sock, &frames[current_frame], bytesFramed+5, frameSize);
 
