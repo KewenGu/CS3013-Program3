@@ -166,7 +166,7 @@ void datalink_Layer(Packet *p, int sock)
     bytesFramed = 0;
     for(i = 0; i < FRAME_PAYLOAD_SIZE; i++)
     {
-      frames[current_frame].payload[i] = (unsigned char *)(&p)[count];
+      frames[current_frame].payload[i] = p->data[count];
       bytesFramed++;
       count++;
       // If reach the end-of-photo specifier
@@ -189,7 +189,7 @@ void datalink_Layer(Packet *p, int sock)
     frames[current_frame].errorDetect[0] = error_handling_result[0];
     frames[current_frame].errorDetect[1] = error_handling_result[1];
 
-    physical_Send(sock, &frames[current_frame], bytesFramed+5, frameSize);
+    physical_Send(sock, &frames[current_frame], bytesFramed+5, sizeof(Frame));
 
     current_frame++;
   }
@@ -221,6 +221,12 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
       goto resend;
     }
 
+    //There's data to receive
+
+    char incomingData[400];
+    int receivedCount = recv(sock, incomingData, 400, 0);
+    printf("Received %d bytes from server\n", receivedCount);
+
 }
 
 /* Function generates the error detection bytes
@@ -233,11 +239,15 @@ unsigned char* error_handling(Frame* t, int size)
   int i;
   unsigned char* result = malloc(2 * sizeof(unsigned char));
 
-  for (i = 0; i < (size - 2); i += 2)
-    result[0] = (unsigned char *)t[i] ^ result[0];
+  for (i = 0; i < (size - 2); i += 2) {
 
-  for (i = 1; i < (size - 2); i += 2)
-    result[1] = (unsigned char *)t[i] ^ result[1];
+    //result[0] = (unsigned char *)t[i] ^ result[0];
+  }
+
+  for (i = 1; i < (size - 2); i += 2) {
+    
+    //result[1] = (unsigned char *)t[i] ^ result[1];
+  }
 
   return result;
 }
