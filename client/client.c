@@ -184,7 +184,7 @@ void datalink_Layer(Packet *p, int sock)
 
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
 
-    unsigned char *error_handling_result = error_handling(frames[current_frame], bytesFramed);
+    unsigned char *error_handling_result = error_handling(&frames[current_frame], bytesFramed);
 
     frames[current_frame].errorDetect[0] = error_handling_result[0];
     frames[current_frame].errorDetect[1] = error_handling_result[1];
@@ -201,6 +201,7 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
   FD_ZERO(&fileDescriptorSet);
   FD_SET(sock, &fileDescriptorSet);
 
+  resend:
 
   if(send(sock, buffer, length, 0) != frameSize) 
       DieWithError("send() error");
@@ -212,6 +213,13 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
     //Frame timer
     select(sock + 1, &fileDescriptorSet, NULL, NULL, &timer_length);
 
+    if(timer_length.tv_sec == 0 && timer_length.tv_usec == 0) {
+      //Timeout hit
+      //Frame not sent
+
+      //Using a goto to attempt to send the frame again. No hate! :)
+      goto resend;
+    }
 
 }
 
@@ -223,7 +231,7 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
 unsigned char* error_handling(Frame* t, int size)
 {
   int i;
-  unsigned char result[2];
+  unsigned char* result = malloc(2 * sizeof(unsigned char));
 
   for (i = 0; i < (size - 2); i += 2)
     result[0] = (unsigned char *)t[i] ^ result[0];
