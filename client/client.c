@@ -191,7 +191,7 @@ void datalink_Layer(Packet *p, int sock)
 
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
 
-    unsigned char *error_handling_result = error_handling(&frames[current_frame], bytesFramed);
+    unsigned char *error_handling_result = error_handling(frames[current_frame], bytesFramed);
 
     frames[current_frame].errorDetect[0] = error_handling_result[0];
     frames[current_frame].errorDetect[1] = error_handling_result[1];
@@ -243,19 +243,19 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
         suppose the frame in hex representation is "00 01 02 03 04 05 06 07... [2 error detection bytes]"
         then, error detection bytes = 00^02^04^06... + 01^03^05^07...  (^ is the operation of XOR, + is the operation of concatenation)
 */
-unsigned char* error_handling(Frame* t, int size)
+unsigned char* error_handling(Frame t, int size)
 {
   int i;
   unsigned char* result = malloc(2 * sizeof(unsigned char));
 
   for (i = 0; i < (size - 2); i += 2) {
 
-    //result[0] = (unsigned char *)t[i] ^ result[0];
+    result[0] = *(unsigned char *)&t ^ result[0];
   }
 
   for (i = 1; i < (size - 2); i += 2) {
 
-    //result[1] = (unsigned char *)t[i] ^ result[1];
+    result[1] = *(unsigned char *)&t ^ result[1];
   }
 
   return result;
