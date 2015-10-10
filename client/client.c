@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   	unsigned short port = WELLKNOWNPORT;
   	servHost = gethostbyname(argv[1]);
 
-  	//int sock = physical_Establish(servHost, port);
+  	int sock = physical_Establish(servHost, port);
 
   	int total_size = 0;
   	int sizes[num_photos];
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 
       packets[current_packet].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
       
-      datalink_Layer(&packets[current_packet], seq_num);
+      datalink_Layer(&packets[current_packet], sock);
 
 
 
@@ -124,6 +124,8 @@ void DieWithError(char *errorMsg)
 
 
 int physical_Establish(struct hostent* host, unsigned short port) {
+
+  printf("Connecting to host on port %d\n", port);
 
 	struct sockaddr_in serverAddress;
   int sock;
@@ -166,6 +168,11 @@ void datalink_Layer(Packet *p, int sock)
     bytesFramed = 0;
     for(i = 0; i < FRAME_PAYLOAD_SIZE; i++)
     {
+      printf("iteration %d of %d\n", i, FRAME_PAYLOAD_SIZE);
+      printf("count is %d and current_frame is %d\n", count, current_frame);
+
+      frames[current_frame].payload = malloc(FRAME_PAYLOAD_SIZE * sizeof(unsigned char));
+
       frames[current_frame].payload[i] = p->data[count];
       bytesFramed++;
       count++;
@@ -201,10 +208,12 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
   FD_ZERO(&fileDescriptorSet);
   FD_SET(sock, &fileDescriptorSet);
 
-  resend:
+  char *newBuffer = malloc(1000 * sizeof(unsigned char));
+  printf("physical_Send: length is %d\n", length);
 
-  if(send(sock, buffer, length, 0) != frameSize) 
+  if(send(sock, newBuffer, length, 0) != frameSize) {
       DieWithError("send() error");
+    }
 
     struct timeval timer_length;
     timer_length.tv_sec = 3;
@@ -218,7 +227,7 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
       //Frame not sent
 
       //Using a goto to attempt to send the frame again. No hate! :)
-      goto resend;
+      //goto resend;
     }
 
     //There's data to receive
@@ -245,7 +254,7 @@ unsigned char* error_handling(Frame* t, int size)
   }
 
   for (i = 1; i < (size - 2); i += 2) {
-    
+
     //result[1] = (unsigned char *)t[i] ^ result[1];
   }
 
