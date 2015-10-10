@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   	int sizes[num_photos];
 
   	//Packet memory allocation. First make space, then we can do the math for the packets easier
-  	for(int i = 0; i < num_photos; i++) {
+  	for(i = 0; i < num_photos; i++) {
 
   		char filename[255];
   		sprintf(filename, "photo%d%d.jpg", clientID, i);
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
   	int current_position = 0;
   	int totalBytesLoaded = 0;
 
-  	for(int i = 0; i < num_photos; i++) {
+  	for(i = 0; i < num_photos; i++) {
 
   		char filename[255];
   		sprintf(filename, "photo%d%d.jpg", clientID, i);
