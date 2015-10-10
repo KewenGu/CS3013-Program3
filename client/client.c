@@ -184,14 +184,14 @@ void datalink_Layer(Packet *p, int sock)
       }
     }
 
-    frames[current_frame].seqNum[0] = seq_num & 0x00ff;
-    frames[current_frame].seqNum[1] = seq_num & 0xff00;
+    frames[current_frame].seqNum[0] = seq_num & 0xff00;
+    frames[current_frame].seqNum[1] = seq_num & 0x00ff;
 
     seq_num++;
 
     frames[current_frame].endOfPacket = END_OF_PACKET_NO;
 
-    unsigned char *error_handling_result = error_handling(frames[current_frame], bytesFramed);
+    char *error_handling_result = error_handling(frames[current_frame], bytesFramed);
 
     frames[current_frame].errorDetect[0] = error_handling_result[0];
     frames[current_frame].errorDetect[1] = error_handling_result[1];
@@ -211,16 +211,16 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
   char *newBuffer = malloc(1000 * sizeof(unsigned char));
   printf("physical_Send: length is %d\n", length);
 
-  if(send(sock, newBuffer, length, 0) != frameSize) {
-      DieWithError("send() error");
-    }
+  if(send(sock, newBuffer, length, 0) == -1)
+    DieWithError("send() error");
 
     struct timeval timer_length;
     timer_length.tv_sec = 3;
     timer_length.tv_usec = 0;
 
     //Frame timer
-    select(sock + 1, &fileDescriptorSet, NULL, NULL, &timer_length);
+    if (select(1, &fileDescriptorSet, NULL, NULL, &timer_length) < 0)
+      DieWithError("select() failed");
 
     if(timer_length.tv_sec == 0 && timer_length.tv_usec == 0) {
       //Timeout hit
@@ -243,10 +243,10 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
         suppose the frame in hex representation is "00 01 02 03 04 05 06 07... [2 error detection bytes]"
         then, error detection bytes = 00^02^04^06... + 01^03^05^07...  (^ is the operation of XOR, + is the operation of concatenation)
 */
-unsigned char* error_handling(Frame t, int size)
+char* error_handling(Frame t, int size)
 {
   int i;
-  unsigned char* result = malloc(2 * sizeof(unsigned char));
+  char *result = malloc(2 * sizeof(unsigned char));
 
   for (i = 0; i < (size - 2); i += 2) {
 

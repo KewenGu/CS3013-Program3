@@ -9,6 +9,17 @@
 
 #include "server.h"
 
+#define PACKET_SIZE 256
+#define FRAME_PAYLOAD_SIZE 130
+
+#define END_OF_PHOTO_YES ((char)4)   // end of transmission
+#define END_OF_PHOTO_NO ((char)3)    // end of text
+
+#define END_OF_PACKET_YES ((char)4)  // end of transmission
+#define END_OF_PACKET_NO ((char)3)   // end of text
+
+unsigned short seq_num = 0;
+
 int main(int argc, char *argv[])
 {
 	if (argc != 1)
@@ -17,7 +28,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	int servSock, clntSock;
+	int servSock, clntSock, bytesRcvd, TotalBytesRcvd, frameLen;
 	unsigned int clntLen;
 	unsigned short port = WELLKNOWNPORT;
 	struct sockaddr_in servAddr, clntAddr;
@@ -45,6 +56,47 @@ int main(int argc, char *argv[])
 			DieWithError("accept() failed");
 		printf("Handling client %s\n", inet_ntoa(clntAddr.sin_addr));
 
+		/* Set up the select and the timer */
+		fd_set fileDescriptorSet;
+		FD_ZERO(&fileDescriptorSet);
+		FD_SET(clntSock, &fileDescriptorSet);
+
+		struct timeval timer_length;
+    timer_length.tv_sec = 3;
+    timer_length.tv_usec = 0;
+
+    if (select(1, &fileDescriptorSet, NULL, NULL, &timer_length) < 0)
+      DieWithError("select() failed");
+
+    /* Receive frame data from client */
+		bytesRcvd = 0;
+		TotalBytesRcvd = 0;
+		frameLen = FRAME_PAYLOAD_SIZE + 5;
+
+		char *recvBuf = malloc(1000 * sizeof(unsigned char));
+
+		while (TotalBytesRcvd < frameLen)
+		{
+			if ((bytesRcvd = recv(clntSock, recvBuf + bytesRcvd, frameLen - TotalBytesRcvd, 0)) <= 0)
+				DieWithError("recv() failed");
+			TotalBytesRcvd += bytesRcvd;
+		}
+
+
+		Frame frame = MakeFrame(recvBuf, TotalBytesRcvd);
+
+		unsigned short num = (unsigned short) (frame.seqNum[0] | frame.seqNum[1]);
+		printf("Sequence number: %d\n", num);
+		char *error_handling_result = error_handling(frame, TotalBytesRcvd);
+
+		printf("Original error detection bytes: %04x\n", (unsigned int)*frame.errorDetect);
+		printf("New error detection bytes: %04x\n", (unsigned int)*error_handling_result);
+		
+		if (num == seq_num && !strcmp(frame.errorDetect, error_handling_result))
+			printf("Frame is correct!\n");
+
+
+
 
 	}
 }
@@ -55,5 +107,45 @@ void DieWithError(char *errorMsg)
 	perror(errorMsg);
 	exit(1);
 }
+
+
+Frame MakeFrame(char *buffer, int bufSize)
+{
+		Frame *frame = malloc(sizeof(Frame));
+		frame->seqNum[0] = buffer[0];
+		frame->seqNum[1] = buffer[1];
+
+		int i;
+		frame->payload = malloc(bufSize - 5);
+		for(i = 2; i < bufSize - 3; i++)
+			frame->payload[i - 2] = buffer[i];
+
+		frame->endOfPacket = buffer[i];
+		frame->errorDetect[0] = buffer[i + 1];
+		frame->errorDetect[1] = buffer[i + 2];
+
+		return *frame;
+}
+
+
+char* error_handling(Frame t, int size)
+{
+  int i;
+  char *result = malloc(2 * sizeof(unsigned char));
+
+  for (i = 0; i < (size - 2); i += 2) {
+
+    result[0] = *(unsigned char *)&t ^ result[0];
+  }
+
+  for (i = 1; i < (size - 2); i += 2) {
+
+    result[1] = *(unsigned char *)&t ^ result[1];
+  }
+
+  return result;
+}
+
+
 
 
