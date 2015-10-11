@@ -84,27 +84,27 @@ int main(int argc, char *argv[])
 			TotalBytesRcvd += bytesRcvd;
 		}
 
-		Frame frame = make_Frame(recvBuf, TotalBytesRcvd);
+		Frame *frame = make_Frame(recvBuf, TotalBytesRcvd);
 
-		unsigned short num = (unsigned short) (frame.seqNum[0] | frame.seqNum[1]);
+		unsigned short num = (unsigned short) (frame->seqNum[0] | frame->seqNum[1]);
 		printf("Sequence number: %d\n", num);
-		char *error_handling_result = error_Handling(frame, TotalBytesRcvd);
+		char *error_handling_result = error_Handling(*frame, TotalBytesRcvd);
 
-		printf("Original error detection bytes: %x\n", *frame.errorDetect);
+		printf("Original error detection bytes: %x\n", *frame->errorDetect);
 		printf("New error detection bytes: %x\n", *error_handling_result);
 		
 
 		//When this if statement is commented out, it kinda works
 
-		//if (num == seq_num && !strcmp(frame.errorDetect, error_handling_result))
-		//{
+		if (num == seq_num && atoi(frame->errorDetect) == atoi(error_handling_result))
+		{
 			printf("Frame is correct!\n");
 
-			strncpy(ack->seqNum, frame.seqNum, 2);
+			strncpy(ack->seqNum, frame->seqNum, 2);
 			strncpy(ack->errorDetect, ack->seqNum, 2);
 
-			printf("ack->seqNum = %x\n", (unsigned int)ack->seqNum);
-      printf("ack->errorDetect = %x\n", (unsigned int)ack->errorDetect);
+			printf("ack->seqNum = %d\n", atoi(ack->seqNum));
+      printf("ack->errorDetect = %d\n", atoi(ack->errorDetect));
       
 			if(send(clntSock, (unsigned char *)ack, sizeof(Frame), 0) < 0)
     		DieWithError("send() error");
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     	printf("Sending ACK back successfully!\n");
 
 
-    	//}
+    }
 	}
 }
 
@@ -124,11 +124,12 @@ void DieWithError(char *errorMsg)
 }
 
 
-Frame make_Frame(char *buffer, int bufSize)
+Frame *make_Frame(char *buffer, int bufSize)
 {
 		Frame *frame = malloc(sizeof(Frame));
-		frame->seqNum[0] = buffer[0];
-		frame->seqNum[1] = buffer[1];
+		frame->frameType = buffer[0];
+		frame->seqNum[0] = buffer[1];
+		frame->seqNum[1] = buffer[2];
 
 		int i;
 		//frame->payload = malloc(bufSize - 5);
@@ -139,8 +140,17 @@ Frame make_Frame(char *buffer, int bufSize)
 		frame->errorDetect[0] = buffer[i + 1];
 		frame->errorDetect[1] = buffer[i + 2];
 
-		return *frame;
+		return frame;
 }
+
+
+Packet *make_Packet(Frame *frames)
+{
+	Packet *packets;
+
+	return packets;
+}
+
 
 
 char* error_Handling(Frame t, int size)
@@ -160,6 +170,7 @@ char* error_Handling(Frame t, int size)
 
   return result;
 }
+
 
 
 

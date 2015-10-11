@@ -178,8 +178,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
     frames[currentFrame].seqNum[0] = seq_num & 0xff00;
     frames[currentFrame].seqNum[1] = seq_num & 0x00ff;
 
-    seq_num++;
-
+    
     frames[currentFrame].endOfPacket = END_OF_PACKET_NO;
 
     char *error_handling_result = error_Handling(frames[currentFrame], bytesFramed);
@@ -188,7 +187,10 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
     frames[currentFrame].errorDetect[1] = error_handling_result[1];
 
     printf("To physical layer\n");
-    physical_Layer(&frames[currentFrame], bytesFramed+5, sock);
+    physical_Layer(&frames[currentFrame], bytesFramed+6, sock);
+
+    seq_num++;
+    currentFrame++;
 
   }
   printf("Returning to application layer\n");
@@ -233,7 +235,7 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
       }
       else
       {
-        printf("data to be received\n");
+        printf("Receiving ACK\n");
         timeOut = 0; // not time out!
       
         //There's data to receive
@@ -243,10 +245,10 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
         printf("ACK received\n");
 
         printf("seq_num = %d\n", seq_num);
-        printf("ack->seqNum = %x\n", (unsigned int)ack->seqNum);
-        printf("ack->errorDetect = %x\n", (unsigned int)ack->errorDetect);
+        printf("ack->seqNum = %d\n", atoi(ack->seqNum));
+        printf("ack->errorDetect = %d\n", atoi(ack->errorDetect));
 
-        if (atoi(ack->seqNum) == seq_num && !strncmp(ack->errorDetect, ack->seqNum, 2))
+        if (atoi(ack->seqNum) == seq_num && atoi(ack->errorDetect) == atoi(ack->seqNum))
         {
           notACKed = 0; // ACK successful!
           break;
@@ -268,7 +270,7 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
         suppose the frame in hex representation is "00 01 02 03 04 05 06 07... [2 error detection bytes]"
         then, error detection bytes = 00^02^04^06... + 01^03^05^07...  (^ is the operation of XOR, + is the operation of concatenation)
 */
-char* error_Handling(Frame t, int size)
+char *error_Handling(Frame t, int size)
 {
   int i;
   char *result = malloc(2 * sizeof(unsigned char));
