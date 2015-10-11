@@ -18,6 +18,9 @@
 #define END_OF_PACKET_YES ((char)4)  // end of transmission
 #define END_OF_PACKET_NO ((char)3)   // end of text
 
+#define DATALINK_EXPECTATION_ACK 1
+#define DATALINK_EXPECTATION_
+
 unsigned short seq_num = 0;
 
 int main(int argc, char** argv) {
@@ -193,13 +196,15 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   printf("Returning to application layer\n");
 }
 
+
 void physical_Layer(Frame* buffer, int frameSize, int sock) 
 {
   int timeOut = 1;
   int notACKed = 1;
   FrameACK *ack = malloc(sizeof(FrameACK));
   
-  struct timeval timerLen;
+  struct timeval timer;
+
   fd_set fileDescriptorSet;
   FD_ZERO(&fileDescriptorSet);
   FD_SET(sock, &fileDescriptorSet);
@@ -212,15 +217,15 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
       if (send(sock, (unsigned char *)buffer, frameSize, 0) < 0)
         DieWithError("send() error");
       
-      timerLen.tv_sec = 3;
-      timerLen.tv_usec = 0;
+      timer.tv_sec = 3;
+      timer.tv_usec = 0;
 
       printf("Start timer\n");
       //Frame timer
-      if (select(1, &fileDescriptorSet, NULL, NULL, &timerLen) < 0)
+      if (select(1, &fileDescriptorSet, NULL, NULL, &timer) < 0)
         DieWithError("select() failed");
 
-      if (timerLen.tv_sec == 0 && timerLen.tv_usec == 0) 
+      if (timer.tv_sec == 0 && timer.tv_usec == 0) 
       {
         printf("Time out!\n");
         timeOut = 1; // time out!
