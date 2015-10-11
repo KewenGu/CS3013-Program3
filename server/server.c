@@ -32,7 +32,8 @@ int main(int argc, char *argv[])
 	unsigned int clntLen;
 	unsigned short port = WELLKNOWNPORT;
 	struct sockaddr_in servAddr, clntAddr;
-	FrameACK *ack = malloc(sizeof(FrameACK));
+	Frame *ack = malloc(sizeof(Frame));
+	ack->frameType = FRAMETYPE_ACK;
 
 	/* Create the socket */
 	if ((servSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -92,8 +93,11 @@ int main(int argc, char *argv[])
 		printf("Original error detection bytes: %x\n", *frame.errorDetect);
 		printf("New error detection bytes: %x\n", *error_handling_result);
 		
-		if (num == seq_num && !strcmp(frame.errorDetect, error_handling_result))
-		{
+
+		//When this if statement is commented out, it kinda works
+
+		//if (num == seq_num && !strcmp(frame.errorDetect, error_handling_result))
+		//{
 			printf("Frame is correct!\n");
 
 			strncpy(ack->seqNum, frame.seqNum, 2);
@@ -102,13 +106,13 @@ int main(int argc, char *argv[])
 			printf("ack->seqNum = %x\n", (unsigned int)ack->seqNum);
       printf("ack->errorDetect = %x\n", (unsigned int)ack->errorDetect);
       
-			if(send(clntSock, (unsigned char *)ack, sizeof(FrameACK), 0) < 0)
+			if(send(clntSock, (unsigned char *)ack, sizeof(Frame), 0) < 0)
     		DieWithError("send() error");
 
     	printf("Sending ACK back successfully!\n");
 
 
-    }
+    	//}
 	}
 }
 
@@ -127,7 +131,7 @@ Frame make_Frame(char *buffer, int bufSize)
 		frame->seqNum[1] = buffer[1];
 
 		int i;
-		frame->payload = malloc(bufSize - 5);
+		//frame->payload = malloc(bufSize - 5);
 		for(i = 2; i < bufSize - 3; i++)
 			frame->payload[i - 2] = buffer[i];
 

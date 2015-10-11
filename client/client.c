@@ -222,7 +222,7 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
 
       printf("Start timer\n");
       //Frame timer
-      if (select(1, &fileDescriptorSet, NULL, NULL, &timer) < 0)
+      if (select(sock + 1, &fileDescriptorSet, NULL, NULL, &timer) < 0)
         DieWithError("select() failed");
 
       if (timer.tv_sec == 0 && timer.tv_usec == 0) 
@@ -233,6 +233,7 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
       }
       else
       {
+        printf("data to be received\n");
         timeOut = 0; // not time out!
       
         //There's data to receive
