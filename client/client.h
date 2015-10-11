@@ -1,8 +1,12 @@
 
 #define WELLKNOWNPORT 5280
 
+#define FRAMETYPE_DATA 0x01
+#define FRAMETYPE_ACK 0x02
+
 typedef struct frameData {
 
+	char frameType; //Now uses one of the two #defines above!
 	char seqNum[2];
 	unsigned char *payload; //somewhere between 1 and 130 bytes
 	char endOfPacket; // end-of-packet byte should be after the payload/packet
@@ -10,12 +14,15 @@ typedef struct frameData {
 	
 } Frame;
 
+/*
 typedef struct frameACK {
 
 	char seqNum[2];
 	char errorDetect[2];
 
 } FrameACK;
+
+*/
 
 
 typedef struct packet {

@@ -18,6 +18,9 @@
 #define END_OF_PACKET_YES ((char)4)  // end of transmission
 #define END_OF_PACKET_NO ((char)3)   // end of text
 
+#define DATALINK_EXPECTATION_ACK 1
+#define DATALINK_EXPECTATION_
+
 unsigned short seq_num = 0;
 
 int main(int argc, char** argv) {
@@ -202,6 +205,11 @@ void datalink_Layer(Packet *p, int sock)
   }
 }
 
+void datalink_Receive(int sock, int type) {
+
+
+}
+
 void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
 
   fd_set fileDescriptorSet;
@@ -229,12 +237,6 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
       //Using a goto to attempt to send the frame again. No hate! :)
       //goto resend;
     }
-
-    //There's data to receive
-
-    char incomingData[400];
-    int receivedCount = recv(sock, incomingData, 400, 0);
-    printf("Received %d bytes from server\n", receivedCount);
 
 }
 
