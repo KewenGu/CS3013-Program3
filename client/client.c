@@ -10,7 +10,6 @@
 #include "client.h"
 
 #define PACKET_SIZE 256
-#define FRAME_PAYLOAD_SIZE 130
 
 #define END_OF_PHOTO_YES ((char)4)   // end of transmission
 #define END_OF_PHOTO_NO ((char)3)    // end of text
@@ -163,8 +162,6 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
       printf("iteration %d of %d\n", i, FRAME_PAYLOAD_SIZE);
       printf("currentPosition is %d and currentFrame is %d\n", currentPosition, currentFrame);
 
-      frames[currentFrame].payload = malloc(FRAME_PAYLOAD_SIZE * sizeof(unsigned char));
-
       frames[currentFrame].payload[i] = p->data[currentPosition];
       bytesFramed++;
       currentPosition++;
@@ -201,7 +198,9 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
 {
   int timeOut = 1;
   int notACKed = 1;
-  FrameACK *ack = malloc(sizeof(FrameACK));
+  //FrameACK *ack = malloc(sizeof(FrameACK));
+  Frame *ack = malloc(sizeof(Frame));
+  ack->frameType = FRAMETYPE_ACK;
   
   struct timeval timer;
 
@@ -236,7 +235,7 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
         timeOut = 0; // not time out!
       
         //There's data to receive
-        if (recv(sock, (unsigned char *)ack, sizeof(FrameACK), 0) < 0)
+        if (recv(sock, ack, sizeof(Frame), 0) < 0)
           DieWithError("recv() failed");
 
         printf("ACK received\n");
