@@ -174,6 +174,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
     }
     totalBytesFramed += bytesFramed;
 
+    frames[currentFrame].frameType = FRAMETYPE_DATA;
     frames[currentFrame].seqNum[0] = seq_num & 0xff00;
     frames[currentFrame].seqNum[1] = seq_num & 0x00ff;
 
