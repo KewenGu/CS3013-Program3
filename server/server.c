@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
 	unsigned int clntLen;
 	unsigned short port = WELLKNOWNPORT;
 	struct sockaddr_in servAddr, clntAddr;
+	FrameACK *ack = malloc(sizeof(FrameACK));
 
 	/* Create the socket */
 	if ((servSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -82,22 +83,32 @@ int main(int argc, char *argv[])
 			TotalBytesRcvd += bytesRcvd;
 		}
 
-
-		Frame frame = MakeFrame(recvBuf, TotalBytesRcvd);
+		Frame frame = make_Frame(recvBuf, TotalBytesRcvd);
 
 		unsigned short num = (unsigned short) (frame.seqNum[0] | frame.seqNum[1]);
 		printf("Sequence number: %d\n", num);
-		char *error_handling_result = error_handling(frame, TotalBytesRcvd);
+		char *error_handling_result = error_Handling(frame, TotalBytesRcvd);
 
-		printf("Original error detection bytes: %04x\n", (unsigned int)*frame.errorDetect);
-		printf("New error detection bytes: %04x\n", (unsigned int)*error_handling_result);
+		printf("Original error detection bytes: %x\n", *frame.errorDetect);
+		printf("New error detection bytes: %x\n", *error_handling_result);
 		
 		if (num == seq_num && !strcmp(frame.errorDetect, error_handling_result))
+		{
 			printf("Frame is correct!\n");
 
+			strncpy(ack->seqNum, frame.seqNum, 2);
+			strncpy(ack->errorDetect, ack->seqNum, 2);
+
+			printf("ack->seqNum = %x\n", (unsigned int)ack->seqNum);
+      printf("ack->errorDetect = %x\n", (unsigned int)ack->errorDetect);
+      
+			if(send(clntSock, (unsigned char *)ack, sizeof(FrameACK), 0) < 0)
+    		DieWithError("send() error");
+
+    	printf("Sending ACK back successfully!\n");
 
 
-
+    }
 	}
 }
 
@@ -109,7 +120,7 @@ void DieWithError(char *errorMsg)
 }
 
 
-Frame MakeFrame(char *buffer, int bufSize)
+Frame make_Frame(char *buffer, int bufSize)
 {
 		Frame *frame = malloc(sizeof(Frame));
 		frame->seqNum[0] = buffer[0];
@@ -128,7 +139,7 @@ Frame MakeFrame(char *buffer, int bufSize)
 }
 
 
-char* error_handling(Frame t, int size)
+char* error_Handling(Frame t, int size)
 {
   int i;
   char *result = malloc(2 * sizeof(unsigned char));

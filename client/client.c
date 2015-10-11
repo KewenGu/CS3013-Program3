@@ -30,89 +30,36 @@ int main(int argc, char** argv) {
 	}
 
 	int clientID = atoi(argv[2]);
-	int num_photos = atoi(argv[3]);
+	int numPhotos = atoi(argv[3]);
   int i, j, k;
+  char fileName[129];
+  
 
 	//Pointer to socket structure that ends up filled in by gethostbyname
-  	struct hostent *servHost;
-  	
-  	unsigned short port = WELLKNOWNPORT;
-  	servHost = gethostbyname(argv[1]);
+	struct hostent *servHost;
+	unsigned short port = WELLKNOWNPORT;
+	servHost = gethostbyname(argv[1]);
+	int sock = physical_Establish(servHost, port);
 
-  	int sock = physical_Establish(servHost, port);
+  
 
-  	int total_size = 0;
-  	int sizes[num_photos];
+  //Packet memory allocation. First make space, then we can do the math for the packets easier
+  for(i = 0; i < numPhotos; i++) 
+  {
+    sprintf(fileName, "photo%d%d.jpg", clientID, i);
+    FILE *file;
+    if((file = fopen(fileName, "rb")) == NULL) 
+    {
+      fprintf(stderr, "%s couldn't be found!\n", fileName);
+      exit(1);
+    }
 
-  	//Packet memory allocation. First make space, then we can do the math for the packets easier
-  	for(i = 0; i < num_photos; i++) {
+    printf("To application layer\n");
+    application_Layer(file, sock);
+    printf("Send %s to the server\n", fileName);
 
-  		char filename[255];
-  		sprintf(filename, "photo%d%d.jpg", clientID, i);
-
-  		FILE *file;
-  		file = fopen(filename, "rb");
-  		if(file == NULL) {
-  			fprintf(stderr, "%s couldn't be found!\n", filename);
-  			exit(1);
-  		}
-
-  		fseek(file, 0, SEEK_END);
-  		total_size += ftell(file);
-  		sizes[i] = ftell(file);
-
-  		fclose(file);
-  	}
-
-  	int num_packets = (total_size / PACKET_SIZE) + (total_size % PACKET_SIZE > 0 ? 1 : 0);
-
-  	//Take in the jpg data
-  	Packet *packets = (Packet *)malloc(num_packets * sizeof(Packet));
-
-  	int current_packet = 0;
-  	int current_position = 0;
-  	int totalBytesLoaded = 0;
-
-  	for(i = 0; i < num_photos; i++) {
-
-  		char filename[255];
-  		sprintf(filename, "photo%d%d.jpg", clientID, i);
-      // Open the JPEG file for reading
-  		FILE *file;
-  		file = fopen(filename, "rb");
-  		if(file == NULL) {
-  			fprintf(stderr, "%s couldn't be found!\n", filename);
-  			exit(1);
-  		}
-
-  		int bytesLoaded = sizes[i];
-
-  		while(bytesLoaded > 0) {
-        // Read from JPEG file one byte at a time
-  			fread(packets[current_packet].data+current_position, 1, 1, file);
-
-  			current_position++;
-  			bytesLoaded--;
-        totalBytesLoaded++;
-        // Start filling a new packet after PACKET_SIZE bytes read
-  			if(current_position == PACKET_SIZE) {
-  				current_position = 0;
-          packets[current_packet].endOfPhoto = END_OF_PHOTO_NO; // Indicate not end-of-photo
-  				current_packet++;
-  			}
-  		}
-
-      packets[current_packet].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
-      
-      datalink_Layer(&packets[current_packet], sock);
-
-
-
-      current_packet++;
-
-  	}
-
-
+    fclose(file);
+  }
 }
 
 
@@ -150,17 +97,59 @@ int physical_Establish(struct hostent* host, unsigned short port) {
 
 }
 
+
+void application_Layer(FILE *file, int sock)
+{
+  fseek(file, 0, SEEK_END);
+  int fileSize = ftell(file);
+  int numPackets = (fileSize / PACKET_SIZE) + (fileSize % PACKET_SIZE > 0 ? 1 : 0);
+
+  Packet *packets = malloc(numPackets * sizeof(Packet));
+
+  int bytesLoaded = 0;
+  int currentPacket = 0;
+  int currentPosition = 0;
+  int i;
+
+  while(bytesLoaded < fileSize && currentPacket < numPackets) {
+    // Read from JPEG file one byte at a time
+    fread(packets[currentPacket].data + currentPosition, 1, 1, file);
+
+    currentPosition++;
+    bytesLoaded++;
+    // Start filling a new packet after PACKET_SIZE bytes read
+    if(currentPosition == PACKET_SIZE) {
+      packets[currentPacket].endOfPhoto = END_OF_PHOTO_NO; // Indicate not end-of-photo
+      currentPosition = 0;
+      currentPacket++;
+    }
+  }
+
+  packets[currentPacket].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
+  
+  for (i = 0; i <= currentPacket; i++)
+  {
+    printf("To datalink layer\n");
+    datalink_Layer(&packets[currentPacket], sizeof(packets[currentPacket]), sock);
+
+  }
+
+
+
+}
+
 // Put the payload into the frame
-void datalink_Layer(Packet *p, int sock)
+void datalink_Layer(Packet *p, int packetSize, int sock)
 {
   // First, initialize the frame
-  int packetSize = sizeof(*p);
-  int num_frames = (packetSize / FRAME_PAYLOAD_SIZE) + (packetSize % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
-  Frame *frames = (Frame *)malloc(num_frames * sizeof(Frame));
-  int i, count = 0;
-  int current_frame = 0;
+  int numFrames = (packetSize / FRAME_PAYLOAD_SIZE) + (packetSize % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
+  Frame *frames = (Frame *)malloc(numFrames * sizeof(Frame));
+  
+  int currentFrame = 0;
+  int currentPosition = 0;
   int bytesFramed = 0;
   int totalBytesFramed = 0;
+  int i;
 
   // Copy the packet into the frame payload
   while(totalBytesFramed < packetSize)
@@ -169,72 +158,102 @@ void datalink_Layer(Packet *p, int sock)
     for(i = 0; i < FRAME_PAYLOAD_SIZE; i++)
     {
       printf("iteration %d of %d\n", i, FRAME_PAYLOAD_SIZE);
-      printf("count is %d and current_frame is %d\n", count, current_frame);
+      printf("currentPosition is %d and currentFrame is %d\n", currentPosition, currentFrame);
 
-      frames[current_frame].payload = malloc(FRAME_PAYLOAD_SIZE * sizeof(unsigned char));
+      frames[currentFrame].payload = malloc(FRAME_PAYLOAD_SIZE * sizeof(unsigned char));
 
-      frames[current_frame].payload[i] = p->data[count];
+      frames[currentFrame].payload[i] = p->data[currentPosition];
       bytesFramed++;
-      count++;
+      currentPosition++;
       // If reach the end-of-photo specifier
-      if(frames[current_frame].payload[i] == END_OF_PHOTO_YES || frames[current_frame].payload[i] == END_OF_PHOTO_NO)
+      if(frames[currentFrame].payload[i] == END_OF_PHOTO_YES || frames[currentFrame].payload[i] == END_OF_PHOTO_NO)
       {  
-        frames[current_frame].endOfPacket = END_OF_PACKET_YES;
+        frames[currentFrame].endOfPacket = END_OF_PACKET_YES;
         break;
       }
     }
+    totalBytesFramed += bytesFramed;
 
-    frames[current_frame].seqNum[0] = seq_num & 0xff00;
-    frames[current_frame].seqNum[1] = seq_num & 0x00ff;
+    frames[currentFrame].seqNum[0] = seq_num & 0xff00;
+    frames[currentFrame].seqNum[1] = seq_num & 0x00ff;
 
     seq_num++;
 
-    frames[current_frame].endOfPacket = END_OF_PACKET_NO;
+    frames[currentFrame].endOfPacket = END_OF_PACKET_NO;
 
-    char *error_handling_result = error_handling(frames[current_frame], bytesFramed);
+    char *error_handling_result = error_Handling(frames[currentFrame], bytesFramed);
 
-    frames[current_frame].errorDetect[0] = error_handling_result[0];
-    frames[current_frame].errorDetect[1] = error_handling_result[1];
+    frames[currentFrame].errorDetect[0] = error_handling_result[0];
+    frames[currentFrame].errorDetect[1] = error_handling_result[1];
 
-    physical_Send(sock, &frames[current_frame], bytesFramed+5, sizeof(Frame));
+    printf("To physical layer\n");
+    physical_Layer(&frames[currentFrame], bytesFramed+5, sock);
 
-    current_frame++;
   }
+  printf("Returning to application layer\n");
 }
 
-void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
-
+void physical_Layer(Frame* buffer, int frameSize, int sock) 
+{
+  int timeOut = 1;
+  int notACKed = 1;
+  FrameACK *ack = malloc(sizeof(FrameACK));
+  
+  struct timeval timerLen;
   fd_set fileDescriptorSet;
   FD_ZERO(&fileDescriptorSet);
   FD_SET(sock, &fileDescriptorSet);
 
-  char *newBuffer = malloc(1000 * sizeof(unsigned char));
-  printf("physical_Send: length is %d\n", length);
+  printf("Physical send: length is %d\n", frameSize);
 
-  if(send(sock, newBuffer, length, 0) == -1)
-    DieWithError("send() error");
+  while (timeOut)
+    while (notACKed)
+    {
+      if (send(sock, (unsigned char *)buffer, frameSize, 0) < 0)
+        DieWithError("send() error");
+      
+      timerLen.tv_sec = 3;
+      timerLen.tv_usec = 0;
 
-    struct timeval timer_length;
-    timer_length.tv_sec = 3;
-    timer_length.tv_usec = 0;
+      printf("Start timer\n");
+      //Frame timer
+      if (select(1, &fileDescriptorSet, NULL, NULL, &timerLen) < 0)
+        DieWithError("select() failed");
 
-    //Frame timer
-    if (select(1, &fileDescriptorSet, NULL, NULL, &timer_length) < 0)
-      DieWithError("select() failed");
+      if (timerLen.tv_sec == 0 && timerLen.tv_usec == 0) 
+      {
+        printf("Time out!\n");
+        timeOut = 1; // time out!
+        break;
+      }
+      else
+      {
+        timeOut = 0; // not time out!
+      
+        //There's data to receive
+        if (recv(sock, (unsigned char *)ack, sizeof(FrameACK), 0) < 0)
+          DieWithError("recv() failed");
 
-    if(timer_length.tv_sec == 0 && timer_length.tv_usec == 0) {
-      //Timeout hit
-      //Frame not sent
+        printf("ACK received\n");
 
-      //Using a goto to attempt to send the frame again. No hate! :)
-      //goto resend;
+        printf("seq_num = %d\n", seq_num);
+        printf("ack->seqNum = %x\n", (unsigned int)ack->seqNum);
+        printf("ack->errorDetect = %x\n", (unsigned int)ack->errorDetect);
+
+        if (atoi(ack->seqNum) == seq_num && !strncmp(ack->errorDetect, ack->seqNum, 2))
+        {
+          notACKed = 0; // ACK successful!
+          break;
+        }
+        else
+        {
+          printf("ACK failed!\n");
+          notACKed = 1; // ACK failed!
+        }
+      }
     }
 
-    //There's data to receive
-
-    char incomingData[400];
-    int receivedCount = recv(sock, incomingData, 400, 0);
-    printf("Received %d bytes from server\n", receivedCount);
+    printf("Sending frame successfully!\n");
 
 }
 
@@ -243,7 +262,7 @@ void physical_Send(int sock, Frame* buffer, int length, int frameSize) {
         suppose the frame in hex representation is "00 01 02 03 04 05 06 07... [2 error detection bytes]"
         then, error detection bytes = 00^02^04^06... + 01^03^05^07...  (^ is the operation of XOR, + is the operation of concatenation)
 */
-char* error_handling(Frame t, int size)
+char* error_Handling(Frame t, int size)
 {
   int i;
   char *result = malloc(2 * sizeof(unsigned char));

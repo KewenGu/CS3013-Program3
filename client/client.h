@@ -30,7 +30,7 @@ typedef struct packet {
 void DieWithError(char *errorMsg);
 
 int physical_Establish(struct hostent* host, unsigned short port);
-void physical_Send(int sock, Frame* buffer, int length, int frameSize);
-
-void datalink_Layer(Packet *p, int sock);
-char* error_handling(Frame t, int size);
+void application_Layer(FILE *file, int sock);
+void datalink_Layer(Packet *p, int packetSize, int sock);
+void physical_Layer(Frame* buffer, int frameSize, int sock);
+char* error_Handling(Frame t, int size);

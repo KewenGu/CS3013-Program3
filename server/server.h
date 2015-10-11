@@ -29,7 +29,7 @@ typedef struct packet {
 
 void DieWithError(char *errorMsg);
 
-Frame MakeFrame(char *buffer, int bufSize);
+Frame make_Frame(char *buffer, int bufSize);
 
-char* error_handling(Frame t, int size);
+char* error_Handling(Frame t, int size);
 
