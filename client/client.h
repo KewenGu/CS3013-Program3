@@ -4,7 +4,7 @@
 #define FRAMETYPE_DATA 0x01
 #define FRAMETYPE_ACK 0x02
 
-typedef struct frameData {
+typedef struct frame {
 
 	char frameType; //Now uses one of the two #defines above!
 	char seqNum[2];
@@ -12,7 +12,7 @@ typedef struct frameData {
 	char endOfPacket; // end-of-packet byte should be after the payload/packet
 	char errorDetect[2];
 	
-} Frame;
+} __attribute__((packed)) Frame;
 
 /*
 typedef struct frameACK {
