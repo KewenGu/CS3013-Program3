@@ -146,6 +146,8 @@ void application_Layer(FILE *file, int sock)
 // Put the payload into the frame
 void datalink_Layer(Packet *p, int packetSize, int sock)
 {
+
+
   // First, initialize the frame
   int numFrames = (packetSize / FRAME_PAYLOAD_SIZE) + (packetSize % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
   Frame *frames = (Frame *)malloc(numFrames * sizeof(Frame));
@@ -169,11 +171,12 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
       bytesFramed++;
       currentPosition++;
       // If reach the end-of-photo specifier
-      if(frames[currentFrame].payload[i] == END_OF_PHOTO_YES || frames[currentFrame].payload[i] == END_OF_PHOTO_NO)
+      /*if(frames[currentFrame].payload[i] == END_OF_PHOTO_YES || frames[currentFrame].payload[i] == END_OF_PHOTO_NO)
       {  
         frames[currentFrame].endOfPacket = END_OF_PACKET_YES;
         break;
       }
+      */
     }
     totalBytesFramed += bytesFramed;
 
@@ -189,7 +192,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
     frames[currentFrame].errorDetect[0] = error_handling_result[0];
     frames[currentFrame].errorDetect[1] = error_handling_result[1];
 
-    printf("To physical layer\n");
+    printf("To physical layer with frame #: %d\n", seq_num);
     physical_Layer(&frames[currentFrame], bytesFramed+6, sock);
 
     seq_num++;
@@ -197,6 +200,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
 
   }
   printf("Returning to application layer\n");
+
 }
 
 
