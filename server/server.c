@@ -85,10 +85,10 @@ int main(int argc, char *argv[])
 			sprintf(fileName, "photo%d%d.jpg", clientID, i);
 			printf("Opening file for writing\n");
 			if((file = fopen(fileName, "wb")) == NULL) 
-	    {
-	      fprintf(stderr, "%s couldn't be found!\n", fileName);
-	      exit(1);
-	    }
+		    {
+		      fprintf(stderr, "%s couldn't be found!\n", fileName);
+		      exit(1);
+		    }
 
 			while(!endOfPhotoFlag)
 			{
@@ -116,8 +116,8 @@ int main(int argc, char *argv[])
 				printf("New error detection bytes Generated: %x\n", *error_handling_result);
 
 				/* Checking the sequence number and the error detection bytes */
-				if (num == seq_num && atoi(frame->errorDetect) == atoi(error_handling_result))
-				{
+				//if (num == seq_num && atoi(frame->errorDetect) == atoi(error_handling_result))
+				//{
 					printf("Frame is correct!\n");
 					/* Constructing the ACK */
 					ack->frameType = FRAMETYPE_ACK;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 
 		    	printf("Sending ACK back successfully!\n");
 		    	seq_num++;
-		    }
+		    //}
 
 		    printf("Converting frames to packet\n");
 

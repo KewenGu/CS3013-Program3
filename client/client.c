@@ -171,8 +171,8 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
 
     for(i = 0; i < bytesToFrame; i++)
     {
-      printf("iteration %d of %d\n", i, FRAME_PAYLOAD_SIZE);
-      printf("currentPosition is %d and currentFrame is %d\n", currentPosition, currentFrame);
+      //printf("iteration %d of %d\n", i, FRAME_PAYLOAD_SIZE);
+      //printf("currentPosition is %d and currentFrame is %d\n", currentPosition, currentFrame);
 
       frames[currentFrame].payload[i] = p->data[currentPosition];
       bytesFramed++;
@@ -200,7 +200,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
     frames[currentFrame].errorDetect[1] = error_handling_result[1];
 
     printf("To physical layer with frame #: %d\n", seq_num);
-    physical_Layer(&frames[currentFrame], bytesFramed + 6, sock);
+    physical_Layer(&frames[currentFrame], FRAME_PAYLOAD_SIZE + 6, sock);
 
     seq_num++;
     currentFrame++;
@@ -262,7 +262,8 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
         printf("ack->seqNum = %d\n", atoi(ack->seqNum));
         printf("ack->errorDetect = %d\n", atoi(ack->errorDetect));
 
-        if (atoi(ack->seqNum) == seq_num && atoi(ack->errorDetect) == atoi(ack->seqNum))
+        if(1)
+        //if (atoi(ack->seqNum) == seq_num && atoi(ack->errorDetect) == atoi(ack->seqNum))
         {
           notACKed = 0; // ACK successful!
           break;
