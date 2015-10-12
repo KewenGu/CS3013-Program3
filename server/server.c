@@ -45,11 +45,6 @@ int main(int argc, char *argv[])
 	Frame *window = malloc(2 * sizeof(Frame));
 	int windowCount = 0;
 	int endOfPhotoFlag = 0;
-	fd_set fileDescriptorSet;
-	FD_ZERO(&fileDescriptorSet);
-	FD_SET(clntSock, &fileDescriptorSet);
-	struct timeval timer_length;
-	
 
 	/* Create the socket */
 	if ((servSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -133,6 +128,7 @@ int main(int argc, char *argv[])
 		    		DieWithError("send() error");
 
 		    	printf("Sending ACK back successfully!\n");
+		    	seq_num++;
 		    }
 
 		    printf("Converting frames to packet\n");
