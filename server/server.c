@@ -34,10 +34,21 @@ int main(int argc, char *argv[])
 	struct sockaddr_in servAddr, clntAddr;
 	char fileName[129];
 	FILE *file;
+	int clientID, numPhotos;
+	unsigned short num;
+	char *error_handling_result;
+	char *recvBuf = malloc(1000 * sizeof(unsigned char));
 	int i;
 	Frame *frame = malloc(sizeof(Frame));
 	Packet *packet = malloc(sizeof(Packet));
 	Frame *ack = malloc(sizeof(Frame));
+	Frame *window = malloc(2 * sizeof(Frame));
+	int windowCount = 0;
+	int endOfPhotoFlag = 0;
+	fd_set fileDescriptorSet;
+	FD_ZERO(&fileDescriptorSet);
+	FD_SET(clntSock, &fileDescriptorSet);
+	struct timeval timer_length;
 	
 
 	/* Create the socket */
@@ -64,8 +75,6 @@ int main(int argc, char *argv[])
 		printf("Handling client %s\n", inet_ntoa(clntAddr.sin_addr));
 
 		/* Receive the client ID and the number of photos from the client */
-		int clientID, numPhotos;
-
 		if (recv(clntSock, &clientID, sizeof(clientID), 0) < 0)
 			DieWithError("recv() failed");
 		printf("Client ID: %d\n", clientID);
@@ -73,20 +82,6 @@ int main(int argc, char *argv[])
 			DieWithError("recv() failed");
 		printf("Number of Photos: %d\n", numPhotos);
 
-		/* Set up a window of frame received */
-		Frame *window = malloc(2 * sizeof(Frame));
-		int windowCount = 0;
-
-		int endOfPhotoFlag = 0;
-
-		/* Set up the select and the timer */
-		fd_set fileDescriptorSet;
-		FD_ZERO(&fileDescriptorSet);
-		FD_SET(clntSock, &fileDescriptorSet);
-
-		struct timeval timer_length;
-
-		
 
 		for (i = 0; i < numPhotos; i++)
 		{
@@ -111,8 +106,7 @@ int main(int argc, char *argv[])
 				bytesRcvd = 0;
 				TotalBytesRcvd = 0;
 				frameLen = FRAME_PAYLOAD_SIZE + 6;
-
-				char *recvBuf = malloc(1000 * sizeof(unsigned char));
+				
 				printf("Receving frame\n");
 				while (TotalBytesRcvd < frameLen)
 				{
@@ -123,9 +117,9 @@ int main(int argc, char *argv[])
 				printf("Frame received\n");
 				make_Frame(&window[windowCount], recvBuf, TotalBytesRcvd);
 
-				unsigned short num = (unsigned short) (frame->seqNum[0] | frame->seqNum[1]);
+				num = (unsigned short) (frame->seqNum[0] | frame->seqNum[1]);
 				printf("Sequence number: %d\n", num);
-				char *error_handling_result = error_Handling(*frame, TotalBytesRcvd);
+				error_handling_result = error_Handling(*frame, TotalBytesRcvd);
 
 				printf("Original error detection bytes: %x\n", *frame->errorDetect);
 				printf("New error detection bytes Generated: %x\n", *error_handling_result);
@@ -181,6 +175,8 @@ void DieWithError(char *errorMsg)
 }
 
 
+
+
 int make_Frame(Frame *frame, char *buffer, int bufSize)
 {
 		
@@ -226,7 +222,6 @@ int make_Packet(Packet *packet, Frame *frames, int index)
 	}
 	return pos;
 }
-
 
 
 char* error_Handling(Frame t, int size)
