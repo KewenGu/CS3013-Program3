@@ -95,12 +95,6 @@ int main(int argc, char *argv[])
 
 			while(!endOfPhotoFlag)
 			{
-				printf("Shart timer\n");
-		    timer_length.tv_sec = 10;
-		    timer_length.tv_usec = 0;
-
-		    if (select(1, &fileDescriptorSet, NULL, NULL, &timer_length) < 0)
-		      break;
 
 		    /* Receive frame data from client */
 				bytesRcvd = 0;
