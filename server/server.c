@@ -109,11 +109,11 @@ int main(int argc, char *argv[])
 				/* Make one frame at a time */
 				make_Frame(&window[windowCount], recvBuf, TotalBytesRcvd);
 
-				printf("Sequence number: %d\n", atoi(frame->seqNum));
-				error_handling_result = error_Handling(*frame, TotalBytesRcvd);
+				printf("Sequence number: %x\n", window[windowCount].seqNum[0] | window[windowCount].seqNum[1]);
+				error_handling_result = error_Handling(window[windowCount], TotalBytesRcvd);
 
-				printf("Original error detection bytes: %x\n", *frame->errorDetect);
-				printf("New error detection bytes Generated: %x\n", *error_handling_result);
+				printf("Original error detection bytes: %s\n", window[windowCount].errorDetect);
+				printf("New error detection bytes Generated: %s\n", error_handling_result);
 
 				/* Checking the sequence number and the error detection bytes */
 				//if (num == seq_num && atoi(frame->errorDetect) == atoi(error_handling_result))
@@ -121,8 +121,8 @@ int main(int argc, char *argv[])
 					printf("Frame is correct!\n");
 					/* Constructing the ACK */
 					ack->frameType = FRAMETYPE_ACK;
-					strncpy(ack->seqNum, frame->seqNum, 2);
-					strncpy(ack->errorDetect, ack->seqNum, 2);
+					strncpy(ack->seqNum, window[windowCount].seqNum, 2);
+					strncpy(ack->errorDetect, window[windowCount].seqNum, 2);
 
 					printf("ack->seqNum = %d\n", atoi(ack->seqNum));
 		      printf("ack->errorDetect = %d\n", atoi(ack->errorDetect));
