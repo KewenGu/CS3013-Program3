@@ -33,9 +33,9 @@ int main(int argc, char** argv) {
 
 	int clientID = atoi(argv[2]);
 	int numPhotos = atoi(argv[3]);
-  int i, j, k;
   char fileName[129];
-  
+  FILE *file;
+  int i, j, k;
 
 	//Pointer to socket structure that ends up filled in by gethostbyname
 	struct hostent *servHost;
@@ -43,13 +43,16 @@ int main(int argc, char** argv) {
 	servHost = gethostbyname(argv[1]);
 	int sock = physical_Establish(servHost, port);
 
-  
+  if (send(sock, &clientID, sizeof(clientID), 0) < 0)
+    DieWithError("send() failed");
+  if (send(sock, &numPhotos, sizeof(numPhotos), 0) < 0)
+    DieWithError("send() failed");
 
   //Packet memory allocation. First make space, then we can do the math for the packets easier
   for(i = 0; i < numPhotos; i++) 
   {
     sprintf(fileName, "photo%d%d.jpg", clientID, i);
-    FILE *file;
+    
     if((file = fopen(fileName, "rb")) == NULL) 
     {
       fprintf(stderr, "%s couldn't be found!\n", fileName);

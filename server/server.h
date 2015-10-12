@@ -36,8 +36,8 @@ typedef struct packet {
 
 void DieWithError(char *errorMsg);
 
-Frame *make_Frame(char *buffer, int bufSize);
-Packet *make_Packet(Frame *frames);
+int make_Frame(Frame *frame, char *buffer, int bufSize);
+int make_Packet(Packet *packet, Frame *frames, int index);
 
 char *error_Handling(Frame t, int size);
 
