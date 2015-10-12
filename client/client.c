@@ -154,6 +154,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   
   int currentFrame = 0;
   int currentPosition = 0;
+  int bytesToFrame = 0;
   int bytesFramed = 0;
   int totalBytesFramed = 0;
   int i;
@@ -162,7 +163,13 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   while(totalBytesFramed < packetSize)
   {
     bytesFramed = 0;
-    for(i = 0; i < FRAME_PAYLOAD_SIZE; i++)
+    
+    if (packetSize - totalBytesFramed > FRAME_PAYLOAD_SIZE)
+      bytesToFrame = FRAME_PAYLOAD_SIZE;
+    else
+      bytesToFrame = packetSize - totalBytesFramed;
+
+    for(i = 0; i < bytesToFrame; i++)
     {
       printf("iteration %d of %d\n", i, FRAME_PAYLOAD_SIZE);
       printf("currentPosition is %d and currentFrame is %d\n", currentPosition, currentFrame);
@@ -193,7 +200,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
     frames[currentFrame].errorDetect[1] = error_handling_result[1];
 
     printf("To physical layer with frame #: %d\n", seq_num);
-    physical_Layer(&frames[currentFrame], bytesFramed+6, sock);
+    physical_Layer(&frames[currentFrame], bytesFramed + 6, sock);
 
     seq_num++;
     currentFrame++;
