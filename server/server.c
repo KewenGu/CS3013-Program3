@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	int servSock, clntSock, bytesRcvd, TotalBytesRcvd, frameLen, packetLen;
+	int servSock, clntSock, bytesRcvd, TotalBytesRcvd;
 	unsigned int clntLen;
 	unsigned short port = WELLKNOWNPORT;
 	struct sockaddr_in servAddr, clntAddr;
@@ -45,6 +45,8 @@ int main(int argc, char *argv[])
 	Frame *window = malloc(2 * sizeof(Frame));
 	int windowCount = 0;
 	int endOfPhotoFlag = 0;
+	int frameLen = FRAME_PAYLOAD_SIZE + 6;
+	int packetLen;
 
 	/* Create the socket */
 	if ((servSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -92,31 +94,32 @@ int main(int argc, char *argv[])
 			{
 
 		    /* Receive frame data from client */
-				bytesRcvd = 0;
-				TotalBytesRcvd = 0;
-				frameLen = FRAME_PAYLOAD_SIZE + 6;
+//				bytesRcvd = 0;
+//				TotalBytesRcvd = 0;
 				
 				printf("Receving frame\n");
-				while (TotalBytesRcvd < frameLen)
-				{
-					if ((bytesRcvd = recv(clntSock, recvBuf + bytesRcvd, frameLen - TotalBytesRcvd, 0)) <= 0)
+//				while (TotalBytesRcvd < frameLen)
+//				{
+					if ((bytesRcvd = recv(clntSock, recvBuf, frameLen, 0)) <= 0)
 						DieWithError("recv() failed");
 					TotalBytesRcvd += bytesRcvd;
-				}
+//				}
 				printf("Frame received\n");
+
+				/* Make one frame at a time */
 				make_Frame(&window[windowCount], recvBuf, TotalBytesRcvd);
 
-				num = (unsigned short) (frame->seqNum[0] | frame->seqNum[1]);
-				printf("Sequence number: %d\n", num);
+				printf("Sequence number: %d\n", atoi(frame->seqNum));
 				error_handling_result = error_Handling(*frame, TotalBytesRcvd);
 
 				printf("Original error detection bytes: %x\n", *frame->errorDetect);
 				printf("New error detection bytes Generated: %x\n", *error_handling_result);
 
+				/* Checking the sequence number and the error detection bytes */
 				if (num == seq_num && atoi(frame->errorDetect) == atoi(error_handling_result))
 				{
 					printf("Frame is correct!\n");
-
+					/* Constructing the ACK */
 					ack->frameType = FRAMETYPE_ACK;
 					strncpy(ack->seqNum, frame->seqNum, 2);
 					strncpy(ack->errorDetect, ack->seqNum, 2);
@@ -124,6 +127,7 @@ int main(int argc, char *argv[])
 					printf("ack->seqNum = %d\n", atoi(ack->seqNum));
 		      printf("ack->errorDetect = %d\n", atoi(ack->errorDetect));
 		      
+		      /* Sending ACK */
 					if(send(clntSock, (unsigned char *)ack, sizeof(Frame), 0) < 0)
 		    		DieWithError("send() error");
 
