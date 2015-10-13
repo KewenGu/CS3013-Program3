@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 				if(send(clntSock, &ack, sizeof(Frame), 0) < 0)
 	    			DieWithError("send() error");
 
-	    		fwrite(incoming->payload, incoming->payloadLen, 1, file);
+	    		fwrite(incoming->payload, FRAME_PAYLOAD_SIZE, 1, file);
 	    		continue;
 
 	    		int posInFrame = 0;

@@ -10,8 +10,6 @@ typedef struct frame {
 
 	char frameType; //Now uses one of the two #defines above!
 	char seqNum[2];
-
-	char payloadLen;
 	char payload[FRAME_PAYLOAD_SIZE];
 
 	char endOfPacket; // end-of-packet byte should be after the payload/packet

@@ -172,20 +172,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   int totalBytesFramed = 0;
   int i;
 
-  int frame = 0;
-  int currentframepos = 0;
-
-  for(int i = 0; i < packetSize; i++) {
-
-    frames[frame].payload[currentframepos] = p->data[i];
-    currentframepos++;
-    if(currentframepos == FRAME_PAYLOAD_SIZE) {
-      frames[frame].payloadLen = FRAME_PAYLOAD_SIZE;
-      currentframepos = 0;
-      frame++;
-    }
-  }
-  /*
+  
   for(int i = 0; i < numFrames; i++) {
 
     if(i < numFrames-1) {
@@ -214,7 +201,6 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
 
 
   }
-  */
 
   
   for(int i = 0; i < numFrames; i++) {
