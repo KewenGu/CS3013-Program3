@@ -22,6 +22,13 @@
 
 unsigned short seq_num = 0;
 
+void printBuffer(char* buffer, int n) {
+  for(int i = 0; i<n; i++)
+     printf("%x", buffer[i]);
+
+  printf("\n");
+}
+
 int main(int argc, char** argv) {
 
 	if(argc != 4) {
@@ -107,6 +114,8 @@ void application_Layer(FILE *file, int sock)
 {
   fseek(file, 0, SEEK_END);
   int fileSize = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
   int numPackets = (fileSize / PACKET_SIZE) + (fileSize % PACKET_SIZE > 0 ? 1 : 0);
 
   Packet *packets = malloc(numPackets * sizeof(Packet));
@@ -130,12 +139,12 @@ void application_Layer(FILE *file, int sock)
     }
   }
 
-  packets[currentPacket].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
+  packets[numPackets - 1].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
   
-  for (i = 0; i <= currentPacket; i++)
+  for (i = 0; i < numPackets; i++)
   {
     printf("To datalink layer\n");
-    datalink_Layer(&packets[currentPacket], sizeof(packets[currentPacket]), sock);
+    datalink_Layer(&packets[i], sizeof(packets[i]), sock);
 
   }
 
@@ -159,8 +168,41 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   int totalBytesFramed = 0;
   int i;
 
+
+  for(int i = 0; i < numFrames; i++) {
+
+    if(i < numFrames-1) {
+      //Frame has full payload
+      memcpy(frames[i].payload, p->data + currentPosition, FRAME_PAYLOAD_SIZE);
+      frames[i].endOfPacket = END_OF_PACKET_NO;
+      frames[i].frameType = FRAMETYPE_DATA;
+      frames[i].seqNum[0] = seq_num & 0xff00;
+      frames[i].seqNum[1] = seq_num & 0x00ff;
+
+      currentPosition += FRAME_PAYLOAD_SIZE;
+    }
+    else if(i == (numFrames-1)) {
+      memcpy(frames[i].payload, p->data + currentPosition, packetSize % FRAME_PAYLOAD_SIZE);
+      frames[i].endOfPacket = END_OF_PACKET_YES;
+
+      frames[i].frameType = FRAMETYPE_DATA;
+      frames[i].seqNum[0] = seq_num & 0xff00;
+      frames[i].seqNum[1] = seq_num & 0x00ff;
+
+      currentPosition += packetSize % FRAME_PAYLOAD_SIZE;
+    }
+
+    seq_num++;
+
+
+  }
+
+  for(int i = 0; i < numFrames; i++) {
+    printf("To physical layer with frame #: %x %x\n", frames[i].seqNum[0], frames[i].seqNum[1]);
+    physical_Layer(&frames[i], sizeof(Frame), sock);
+  }
   // Copy the packet into the frame payload
-  while(totalBytesFramed < packetSize)
+  /*while(totalBytesFramed < packetSize)
   {
     bytesFramed = 0;
     
@@ -178,12 +220,12 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
       bytesFramed++;
       currentPosition++;
       // If reach the end-of-photo specifier
-      /*if(frames[currentFrame].payload[i] == END_OF_PHOTO_YES || frames[currentFrame].payload[i] == END_OF_PHOTO_NO)
+      if(frames[currentFrame].payload[i] == END_OF_PHOTO_YES || frames[currentFrame].payload[i] == END_OF_PHOTO_NO)
       {  
         frames[currentFrame].endOfPacket = END_OF_PACKET_YES;
         break;
       }
-      */
+      
     }
     totalBytesFramed += bytesFramed;
 
@@ -206,6 +248,9 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
     currentFrame++;
 
   }
+
+  */
+
   printf("Returning to application layer\n");
 
 }
@@ -230,7 +275,7 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
   while (timeOut)
     while (notACKed)
     {
-      if (send(sock, (unsigned char *)buffer, frameSize, 0) < 0)
+      if (send(sock, (char *)buffer, frameSize, 0) < 0)
         DieWithError("send() error");
       
       timer.tv_sec = 3;
@@ -258,9 +303,9 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
 
         printf("ACK received\n");
 
-        printf("seq_num = %d\n", seq_num);
-        printf("ack->seqNum = %d\n", atoi(ack->seqNum));
-        printf("ack->errorDetect = %d\n", atoi(ack->errorDetect));
+        printf("seq_num = %x %x\n", buffer->seqNum[0], buffer->seqNum[1]);
+        printf("ack->seqNum = %x %x\n", ack->seqNum[0], ack->seqNum[1]);
+        printf("ack->errorDetect = %d\n", ack->errorDetect);
 
         if(1)
         //if (atoi(ack->seqNum) == seq_num && atoi(ack->errorDetect) == atoi(ack->seqNum))

@@ -73,8 +73,55 @@ int main(int argc, char *argv[])
 
 		/* Receive the client ID and the number of photos from the client */
 		if (recv(clntSock, &clientID, sizeof(clientID), 0) < 0)
-			DieWithError("recv() failed");
+			DieWithError("recv() failed to get the clientID");
 		printf("Client ID: %d\n", clientID);
+		/*
+		if(recv(clntSock, &numPhotos, sizeof(numPhotos), 0) < 0)
+			DieWithError("recv() failed to get num photos");
+		printf("Number of photos: %d\n", numPhotos);
+
+
+		int photosReceived = 0;
+		Packet currentPacket;
+		int positionInPacket = 0;
+
+		int currentFileIndex = 0;
+		sprintf(fileName, "photo%d%d.jpg", clientID, i);
+		printf("Opening file for writing\n");
+		if((file = fopen(fileName, "wb")) == NULL) 
+	    {
+	      fprintf(stderr, "%s couldn't be found!\n", fileName);
+	      exit(1);
+	    }
+
+		while(1) {
+
+			Frame *incoming = malloc(sizeof(Frame));
+			int bytesRcvd = recv(clntSock, incoming, 136, 0);
+
+			printf("Frame is correct!\n");
+
+			//Constructing the ACK
+			Frame ack;
+			ack.frameType = FRAMETYPE_ACK;
+
+      		//Sending ACK
+			if(send(clntSock, &ack, sizeof(Frame), 0) < 0)
+    			DieWithError("send() error");
+
+    		//For each byte in the frame payload
+    		for(int i = 0; i < FRAME_PAYLOAD_SIZE; i++) {
+    			fwrite(currentPacket.data, 256, 1, file);
+
+    		}
+
+
+		}
+		
+	}
+	*/
+		
+		
 		if (recv(clntSock, &numPhotos, sizeof(numPhotos), 0) < 0)
 			DieWithError("recv() failed");
 		printf("Number of Photos: %d\n", numPhotos);
@@ -93,7 +140,7 @@ int main(int argc, char *argv[])
 			while(!endOfPhotoFlag)
 			{
 
-		    /* Receive frame data from client */
+		    //Receive frame data from client 
 //				bytesRcvd = 0;
 //				TotalBytesRcvd = 0;
 				
@@ -103,11 +150,12 @@ int main(int argc, char *argv[])
 					if ((bytesRcvd = recv(clntSock, recvBuf, frameLen, 0)) <= 0)
 						DieWithError("recv() failed");
 					TotalBytesRcvd += bytesRcvd;
+					printf("bytesRcvd: %d\n", bytesRcvd);
 //				}
 				printf("Frame received\n");
 
-				/* Make one frame at a time */
-				make_Frame(&window[windowCount], recvBuf, TotalBytesRcvd);
+				//Make one frame at a time
+				make_Frame(&window[windowCount], recvBuf, 136);
 
 				printf("Sequence number: %x\n", window[windowCount].seqNum[0] | window[windowCount].seqNum[1]);
 				error_handling_result = error_Handling(window[windowCount], TotalBytesRcvd);
@@ -115,19 +163,19 @@ int main(int argc, char *argv[])
 				printf("Original error detection bytes: %s\n", window[windowCount].errorDetect);
 				printf("New error detection bytes Generated: %s\n", error_handling_result);
 
-				/* Checking the sequence number and the error detection bytes */
+				//Checking the sequence number and the error detection bytes
 				//if (num == seq_num && atoi(frame->errorDetect) == atoi(error_handling_result))
 				//{
 					printf("Frame is correct!\n");
-					/* Constructing the ACK */
+					//Constructing the ACK
 					ack->frameType = FRAMETYPE_ACK;
-					strncpy(ack->seqNum, window[windowCount].seqNum, 2);
-					strncpy(ack->errorDetect, window[windowCount].seqNum, 2);
+					memcpy(ack->seqNum, window[windowCount].seqNum, 2);
+					memcpy(ack->errorDetect, window[windowCount].seqNum, 2);
 
-					printf("ack->seqNum = %d\n", atoi(ack->seqNum));
-		      printf("ack->errorDetect = %d\n", atoi(ack->errorDetect));
+					printf("ack->seqNum = %x %x\n", ack->seqNum[0], ack->seqNum[1]);
+		      printf("ack->errorDetect = %x %x\n", ack->errorDetect[0], ack->errorDetect[1]);
 		      
-		      /* Sending ACK */
+		      //Sending ACK
 					if(send(clntSock, (unsigned char *)ack, sizeof(Frame), 0) < 0)
 		    		DieWithError("send() error");
 
@@ -137,9 +185,9 @@ int main(int argc, char *argv[])
 
 		    printf("Converting frames to packet\n");
 
-		    /* Convert frames to packet */
+		    // Convert frames to packet
 		    if (window[windowCount].endOfPacket == END_OF_PACKET_YES)
-		    	packetLen = make_Packet(packet, window, windowCount);
+		    	packetLen = make_Packet(packet, window, !windowCount);
 
 		    printf("Printing packet payload to file\n");
 
@@ -158,7 +206,10 @@ int main(int argc, char *argv[])
 		  fclose(file);
 
   	}
-	}
+}
+	
+	
+
 }
 
 
@@ -173,21 +224,26 @@ void DieWithError(char *errorMsg)
 
 int make_Frame(Frame *frame, char *buffer, int bufSize)
 {
+
+	memcpy(frame, buffer, bufSize);
+	return 1;
 		
+		/*
 		frame->frameType = buffer[0];
 		frame->seqNum[0] = buffer[1];
 		frame->seqNum[1] = buffer[2];
 
 		int i;
 		//frame->payload = malloc(bufSize - 5);
-		for(i = 2; i < bufSize - 3; i++)
-			frame->payload[i - 2] = buffer[i];
+		for(i = 3; i < bufSize - 3; i++)
+			frame->payload[i - 3] = buffer[i];
 
 		frame->endOfPacket = buffer[i];
 		frame->errorDetect[0] = buffer[i + 1];
 		frame->errorDetect[1] = buffer[i + 2];
 
 		return 1;
+		*/
 }
 
 
@@ -203,9 +259,9 @@ int make_Packet(Packet *packet, Frame *frames, int index)
 		pos++;
 	}
 
-	if (packet->endOfPhoto == END_OF_PHOTO_YES) {}
+	if (frames[i].endOfPacket == END_OF_PACKET_YES) {}
 		
-	else if (packet->endOfPhoto == END_OF_PHOTO_NO)
+	else if (frames[i].endOfPacket == END_OF_PACKET_NO)
 	{
 		i = !index;
 		for (j = 0; j < sizeof(frames[i].payload); j++)
