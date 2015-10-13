@@ -18,9 +18,7 @@
 #define END_OF_PACKET_YES ((char)4)  // end of transmission
 #define END_OF_PACKET_NO ((char)3)   // end of text
 
-//#define DATALINK_EXPECTATION_ACK 1
-//#define DATALINK_EXPECTATION_
-
+//Global sequence number that we increment per-frame that we are sending to the server
 unsigned short seq_num = 0;
 
 //Author: Kewen Gu
@@ -177,6 +175,8 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
 
     if(i < numFrames-1) {
       //Frame has full payload
+
+      //Copy the full payload in
       memcpy(frames[i].payload, p->data + currentPosition, FRAME_PAYLOAD_SIZE);
       frames[i].endOfPacket = END_OF_PACKET_NO;
 
@@ -187,6 +187,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
 
       currentPosition += FRAME_PAYLOAD_SIZE;
     }
+    //The last frame, as shown here, is not full
     else if(i == (numFrames-1)) {
       //The frame does not have a full payload
       memcpy(frames[i].payload, p->data + currentPosition, packetSize % FRAME_PAYLOAD_SIZE);

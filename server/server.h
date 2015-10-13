@@ -7,6 +7,7 @@
 #define FRAMETYPE_ACK 0x02
 
 //Author: Preston Mueller
+//Frame is a packed structure, which means we don't see any annoying padding bytes
 typedef struct frame {
 
 	char frameType; //Now uses one of the two #defines above!
@@ -19,6 +20,7 @@ typedef struct frame {
 } __attribute__((packed)) Frame;
 
 //Author: Preston Mueller
+//Packet is a packed structure, which means we don't see any annoying padding bytes
 typedef struct packet {
 
 	char data[256];
@@ -26,8 +28,11 @@ typedef struct packet {
 
 } __attribute__((packed)) Packet;
 
+//Standard function for exiting with an error
 void DieWithError(char *errorMsg);
 
+//Functions to putting together frames and packets
+//See implementation in .c for ownership
 int make_Frame(Frame *frame, char *buffer, int bufSize);
 int make_Packet(Packet *packet, Frame *frames, int index);
 

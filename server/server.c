@@ -141,6 +141,7 @@ int main(int argc, char *argv[])
 	    		fwrite(incoming->payload, FRAME_PAYLOAD_SIZE, 1, file);
 	    		continue;
 
+	    		//Fill packet with frame data
 	    		int posInFrame = 0;
 	    		while(posInFrame < FRAME_PAYLOAD_SIZE) {
 	    			packetArray[currentPacket].data[posInCurrentPacket] = incoming->payload[posInFrame];
@@ -160,6 +161,7 @@ int main(int argc, char *argv[])
 
     		printf("Application layer: Writing image content to file\n");
 
+    		//Write out all packets to the file system
     		int i;
     		for(i = 0; i < currentPacket; i++) {
     				fwrite(packetArray[currentPacket].data, PACKET_SIZE, 1, file);
@@ -171,7 +173,7 @@ int main(int argc, char *argv[])
 
 }
 
-
+//Author: CS3516 course materials
 void DieWithError(char *errorMsg)
 {
 	perror(errorMsg);
