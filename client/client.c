@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdlib.h>
@@ -172,7 +173,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   int i;
 
   //Above, we made frames. Here, we are filling them with packet payloads until we cannot anymore
-  for(int i = 0; i < numFrames; i++) {
+  for(i = 0; i < numFrames; i++) {
 
     if(i < numFrames-1) {
       //Frame has full payload
@@ -206,7 +207,7 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   }
 
   //For each of the frames that we crearted, send it to the physical layer
-  for(int i = 0; i < numFrames; i++) {
+  for(i = 0; i < numFrames; i++) {
     printf("To physical layer with frame #: %x %x\n", frames[i].seqNum[0], frames[i].seqNum[1]);
     physical_Layer(&frames[i], sizeof(Frame), sock);
   }

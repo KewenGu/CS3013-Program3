@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdlib.h>
@@ -71,6 +72,11 @@ int main(int argc, char *argv[])
 	if (listen(servSock, MAXPENDING) < 0)
 		DieWithError("listen() failed");
 
+	struct timeval start_time;
+	struct timeval end_time;
+
+
+
 	while(1)
 	{
 		clntLen = sizeof(clntAddr);
@@ -80,6 +86,8 @@ int main(int argc, char *argv[])
 		if ((clntSock = accept(servSock, (struct sockaddr *) &clntAddr, &clntLen)) < 0)
 			DieWithError("accept() failed");
 		printf("Handling client %s\n", inet_ntoa(clntAddr.sin_addr));
+
+		gettimeofday(&start_time, NULL);
 
 		/* Receive the client ID and the number of photos from the client */
 		if (recv(clntSock, &clientID, sizeof(clientID), 0) < 0)
@@ -107,9 +115,16 @@ int main(int argc, char *argv[])
 	    int photosProcessed = 0;
 
 		while(1) {
-
 				Frame *incoming = malloc(sizeof(Frame));
 				int bytesRcvd = recv(clntSock, incoming, sizeof(Frame), 0);
+				
+					if(bytesRcvd < 0) {
+						gettimeofday(&end_time, NULL);
+
+					    double timeDifference = (((end_time.tv_sec) * 1000000) + ((end_time.tv_usec))) - (((start_time.tv_sec) * 1000000) + ((start_time.tv_usec)));
+					    printf("Client : transfer took %f seconds.\n", timeDifference/1000000);
+					    exit(0);
+					}
 
 				printf("Data link layer: Received a frame.\n");
 
@@ -118,6 +133,7 @@ int main(int argc, char *argv[])
 				ack.frameType = FRAMETYPE_ACK;
 
 				printf("Data link layer: ACKing frame.\n");
+
 	      		//Sending ACK
 				if(send(clntSock, &ack, sizeof(Frame), 0) < 0)
 	    			DieWithError("send() error");
@@ -143,13 +159,16 @@ int main(int argc, char *argv[])
     		}
 
     		printf("Application layer: Writing image content to file\n");
-    		for(int i = 0; i < currentPacket; i++) {
+
+    		int i;
+    		for(i = 0; i < currentPacket; i++) {
     				fwrite(packetArray[currentPacket].data, PACKET_SIZE, 1, file);
     		}
     		
     		fclose(file);
+ 
 	}
-	
+
 }
 
 
