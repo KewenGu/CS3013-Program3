@@ -9,7 +9,7 @@
 
 #include "client.h"
 
-#define PACKET_SIZE 256
+#define PACKET_SIZE sizeof(Packet)
 
 #define END_OF_PHOTO_YES ((char)4)   // end of transmission
 #define END_OF_PHOTO_NO ((char)3)    // end of text
@@ -29,7 +29,11 @@ void printBuffer(char* buffer, int n) {
   printf("\n");
 }
 
+FILE* file2;
+
 int main(int argc, char** argv) {
+
+  file2 = fopen("test.jpg", "wb");
 
 	if(argc != 4) {
 
@@ -125,7 +129,7 @@ void application_Layer(FILE *file, int sock)
   int currentPosition = 0;
   int i;
 
-  while(bytesLoaded < fileSize && currentPacket < numPackets) {
+  while(bytesLoaded < fileSize) {
     // Read from JPEG file one byte at a time
     fread(packets[currentPacket].data + currentPosition, 1, 1, file);
 
@@ -133,19 +137,18 @@ void application_Layer(FILE *file, int sock)
     bytesLoaded++;
     // Start filling a new packet after PACKET_SIZE bytes read
     if(currentPosition == PACKET_SIZE) {
-      packets[currentPacket].endOfPhoto = END_OF_PHOTO_NO; // Indicate not end-of-photo
+      //packets[currentPacket].endOfPhoto = END_OF_PHOTO_NO; // Indicate not end-of-photo
       currentPosition = 0;
       currentPacket++;
     }
   }
 
-  packets[numPackets - 1].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
+  //packets[numPackets - 1].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
   
   for (i = 0; i < numPackets; i++)
   {
     printf("To datalink layer\n");
     datalink_Layer(&packets[i], sizeof(packets[i]), sock);
-
   }
 
 
@@ -156,10 +159,11 @@ void application_Layer(FILE *file, int sock)
 void datalink_Layer(Packet *p, int packetSize, int sock)
 {
 
-
   // First, initialize the frame
   int numFrames = (packetSize / FRAME_PAYLOAD_SIZE) + (packetSize % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
   Frame *frames = (Frame *)malloc(numFrames * sizeof(Frame));
+
+  printf("numFrames: %d\n", numFrames);
   
   int currentFrame = 0;
   int currentPosition = 0;
@@ -168,7 +172,20 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
   int totalBytesFramed = 0;
   int i;
 
+  int frame = 0;
+  int currentframepos = 0;
 
+  for(int i = 0; i < packetSize; i++) {
+
+    frames[frame].payload[currentframepos] = p->data[i];
+    currentframepos++;
+    if(currentframepos == FRAME_PAYLOAD_SIZE) {
+      frames[frame].payloadLen = FRAME_PAYLOAD_SIZE;
+      currentframepos = 0;
+      frame++;
+    }
+  }
+  /*
   for(int i = 0; i < numFrames; i++) {
 
     if(i < numFrames-1) {
@@ -189,18 +206,22 @@ void datalink_Layer(Packet *p, int packetSize, int sock)
       frames[i].seqNum[0] = seq_num & 0xff00;
       frames[i].seqNum[1] = seq_num & 0x00ff;
 
-      currentPosition += packetSize % FRAME_PAYLOAD_SIZE;
+      currentPosition += (packetSize % FRAME_PAYLOAD_SIZE);
     }
+    
 
     seq_num++;
 
 
   }
+  */
 
+  
   for(int i = 0; i < numFrames; i++) {
     printf("To physical layer with frame #: %x %x\n", frames[i].seqNum[0], frames[i].seqNum[1]);
     physical_Layer(&frames[i], sizeof(Frame), sock);
   }
+
   // Copy the packet into the frame payload
   /*while(totalBytesFramed < packetSize)
   {
@@ -275,7 +296,7 @@ void physical_Layer(Frame* buffer, int frameSize, int sock)
   while (timeOut)
     while (notACKed)
     {
-      if (send(sock, (char *)buffer, frameSize, 0) < 0)
+      if (send(sock, buffer, frameSize, 0) < 0)
         DieWithError("send() error");
       
       timer.tv_sec = 3;

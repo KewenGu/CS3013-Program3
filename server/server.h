@@ -10,7 +10,8 @@ typedef struct frame {
 
 	char frameType; //Now uses one of the two #defines above!
 	char seqNum[2];
-	//unsigned char *payload; //somewhere between 1 and 130 bytes
+
+	char payloadLen;
 	char payload[FRAME_PAYLOAD_SIZE];
 
 	char endOfPacket; // end-of-packet byte should be after the payload/packet
@@ -18,21 +19,13 @@ typedef struct frame {
 	
 } __attribute__((packed)) Frame;
 
-typedef struct frameACK {
-
-	char seqNum[2];
-	char errorDetect[2];
-
-} FrameACK;
-
 
 typedef struct packet {
 
 	char data[256];
-	char endOfPhoto;
+	//char endOfPhoto;
 
-} Packet;
-
+} __attribute__((packed)) Packet;
 
 void DieWithError(char *errorMsg);
 

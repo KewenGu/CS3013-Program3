@@ -9,8 +9,7 @@
 
 #include "server.h"
 
-#define PACKET_SIZE 256
-#define FRAME_PAYLOAD_SIZE 130
+#define PACKET_SIZE sizeof(Packet)
 
 #define END_OF_PHOTO_YES ((char)4)   // end of transmission
 #define END_OF_PHOTO_NO ((char)3)    // end of text
@@ -75,15 +74,11 @@ int main(int argc, char *argv[])
 		if (recv(clntSock, &clientID, sizeof(clientID), 0) < 0)
 			DieWithError("recv() failed to get the clientID");
 		printf("Client ID: %d\n", clientID);
-		/*
+		
 		if(recv(clntSock, &numPhotos, sizeof(numPhotos), 0) < 0)
 			DieWithError("recv() failed to get num photos");
 		printf("Number of photos: %d\n", numPhotos);
 
-
-		int photosReceived = 0;
-		Packet currentPacket;
-		int positionInPacket = 0;
 
 		int currentFileIndex = 0;
 		sprintf(fileName, "photo%d%d.jpg", clientID, i);
@@ -94,34 +89,60 @@ int main(int argc, char *argv[])
 	      exit(1);
 	    }
 
+	    Packet* packetArray = malloc(1000 * sizeof(Packet));
+	    int currentPacket = 0;
+	    int posInCurrentPacket = 0;
+
+	    int photosProcessed = 0;
+
 		while(1) {
 
-			Frame *incoming = malloc(sizeof(Frame));
-			int bytesRcvd = recv(clntSock, incoming, 136, 0);
+				Frame *incoming = malloc(sizeof(Frame));
+				int bytesRcvd = recv(clntSock, incoming, sizeof(Frame), 0);
 
-			printf("Frame is correct!\n");
+				printf("Frame is correct!\n");
 
-			//Constructing the ACK
-			Frame ack;
-			ack.frameType = FRAMETYPE_ACK;
+				//Constructing the ACK
+				Frame ack;
+				ack.frameType = FRAMETYPE_ACK;
 
-      		//Sending ACK
-			if(send(clntSock, &ack, sizeof(Frame), 0) < 0)
-    			DieWithError("send() error");
+	      		//Sending ACK
+				if(send(clntSock, &ack, sizeof(Frame), 0) < 0)
+	    			DieWithError("send() error");
 
-    		//For each byte in the frame payload
-    		for(int i = 0; i < FRAME_PAYLOAD_SIZE; i++) {
-    			fwrite(currentPacket.data, 256, 1, file);
+	    		fwrite(incoming->payload, incoming->payloadLen, 1, file);
+	    		continue;
 
+	    		int posInFrame = 0;
+	    		while(posInFrame < FRAME_PAYLOAD_SIZE) {
+	    			packetArray[currentPacket].data[posInCurrentPacket] = incoming->payload[posInFrame];
+
+	    			posInCurrentPacket++;
+	    			if(posInCurrentPacket == PACKET_SIZE || incoming->payload[posInFrame] == END_OF_PACKET_YES) {
+	    				currentPacket++;
+	    			}
+	    			posInFrame++;
+	    		}
+
+    			
+    			printf("Packets processed: %d\n", currentPacket);
+    			
+    			if(currentPacket == 43)break;
     		}
 
+    		for(int i = 0; i < currentPacket; i++) {
+    				fwrite(packetArray[currentPacket].data, PACKET_SIZE, 1, file);
+    		}
+    		
+    		fclose(file);
 
-		}
-		
+
 	}
-	*/
 		
+	
+	
 		
+		/*
 		if (recv(clntSock, &numPhotos, sizeof(numPhotos), 0) < 0)
 			DieWithError("recv() failed");
 		printf("Number of Photos: %d\n", numPhotos);
@@ -187,7 +208,7 @@ int main(int argc, char *argv[])
 
 		    // Convert frames to packet
 		    if (window[windowCount].endOfPacket == END_OF_PACKET_YES)
-		    	packetLen = make_Packet(packet, window, !windowCount);
+		    	packetLen = make_Packet(packet, window, windowCount);
 
 		    printf("Printing packet payload to file\n");
 
@@ -206,7 +227,8 @@ int main(int argc, char *argv[])
 		  fclose(file);
 
   	}
-}
+  	*/
+
 	
 	
 
