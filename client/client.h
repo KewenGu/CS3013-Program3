@@ -6,6 +6,7 @@
 #define FRAMETYPE_DATA 0x01
 #define FRAMETYPE_ACK 0x02
 
+//Author: Preston Mueller
 typedef struct frame {
 
 	char frameType; //Now uses one of the two #defines above!
@@ -18,6 +19,7 @@ typedef struct frame {
 } __attribute__((packed)) Frame;
 
 
+//Author: Preston Mueller
 typedef struct packet {
 
 	char data[256];
