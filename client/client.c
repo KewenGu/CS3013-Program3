@@ -43,6 +43,11 @@ int main(int argc, char** argv) {
 	servHost = gethostbyname(argv[1]);
 	int sock = physical_Establish(servHost, port);
 
+  if (send(sock, &clientID, sizeof(clientID), 0) < 0)
+    DieWithError("send() failed");
+  if (send(sock, &numPhotos, sizeof(numPhotos), 0) < 0)
+    DieWithError("send() failed");
+
   //Packet memory allocation. First make space, then we can do the math for the packets easier
   for(i = 0; i < numPhotos; i++) 
   {
