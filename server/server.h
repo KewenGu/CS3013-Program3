@@ -1,36 +1,23 @@
+/* Kewen Gu & Preston Mueller, Program 3, CS3516 */
 
-#define WELLKNOWNPORT 5280
-#define MAXPENDING 10
+#define PORT_NUMBER 4074
+#define MAX_NUM_CLIENTS 10
 
-#define FRAME_PAYLOAD_SIZE 130
-#define FRAMETYPE_DATA 0x01
-#define FRAMETYPE_ACK 0x02
+#define PACKET_SIZE 257
+#define FRAME_SIZE 136
+#define ACK_SIZE 5
 
-typedef struct frame {
+#define FRAME_TYPE_DATA 0x01
+#define FRAME_TYPE_ACK 0x02
 
-	char frameType; //Now uses one of the two #defines above!
-	char seqNum[2];
+#define END_OF_PHOTO_YES ((unsigned char)4)   // end of transmission
+#define END_OF_PHOTO_NO ((unsigned char)3)    // end of text
 
-	char payloadLen;
-	char payload[FRAME_PAYLOAD_SIZE];
-
-	char endOfPacket; // end-of-packet byte should be after the payload/packet
-	char errorDetect[2];
-	
-} __attribute__((packed)) Frame;
+#define END_OF_PACKET_YES ((unsigned char)4)  // end of transmission
+#define END_OF_PACKET_NO ((unsigned char)3)   // end of text
 
 
-typedef struct packet {
-
-	char data[256];
-	//char endOfPhoto;
-
-} __attribute__((packed)) Packet;
-
+void ApplicationLayer(int clntSock, FILE *file);
+int DatalinkLayer(unsigned char *packet, int clntSock);
+unsigned char *ErrorHandling(unsigned char *frame, int len);
 void DieWithError(char *errorMsg);
-
-int make_Frame(Frame *frame, char *buffer, int bufSize);
-int make_Packet(Packet *packet, Frame *frames, int index);
-
-char *error_Handling(Frame t, int size);
-

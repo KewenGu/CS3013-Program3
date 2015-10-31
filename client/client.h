@@ -1,36 +1,26 @@
+/* Kewen Gu & Preston Mueller, Program 3, CS3516 */
 
-#define WELLKNOWNPORT 5280
+#define PORT_NUMBER 4074
+#define TIME_OUT_USECS 300000
 
-#define FRAME_PAYLOAD_SIZE 130
+#define PACKET_SIZE 257
+#define FRAME_SIZE 136
+#define ACK_SIZE 5
 
-#define FRAMETYPE_DATA 0x01
-#define FRAMETYPE_ACK 0x02
+#define FRAME_TYPE_DATA 0x01
+#define FRAME_TYPE_ACK 0x02
 
-typedef struct frame {
+#define END_OF_PHOTO_YES ((unsigned char)4)   // end of transmission
+#define END_OF_PHOTO_NO ((unsigned char)3)    // end of text
 
-	char frameType; //Now uses one of the two #defines above!
-	char seqNum[2];
-
-	char payloadLen;
-	char payload[FRAME_PAYLOAD_SIZE];
-
-	char endOfPacket; // end-of-packet byte should be after the payload/packet
-	char errorDetect[2];
-	
-} __attribute__((packed)) Frame;
+#define END_OF_PACKET_YES ((unsigned char)4)  // end of transmission
+#define END_OF_PACKET_NO ((unsigned char)3)   // end of text
 
 
-typedef struct packet {
-
-	char data[256];
-	//char endOfPhoto;
-
-} __attribute__((packed)) Packet;
-
+int PhysicalEstablish(struct hostent* host, unsigned short port);
+void ApplicationLayer(FILE *file, int sock);
+void DatalinkLayer(unsigned char *packet, int packetSize, int sock);
+int PhysicalLayer(unsigned char *frame, int frameSize, int sock);
+unsigned char *ErrorHandling(unsigned char *frame, int len);
 void DieWithError(char *errorMsg);
 
-int physical_Establish(struct hostent* host, unsigned short port);
-void application_Layer(FILE *file, int sock);
-void datalink_Layer(Packet *p, int packetSize, int sock);
-void physical_Layer(Frame* buffer, int frameSize, int sock);
-char* error_Handling(Frame t, int size);

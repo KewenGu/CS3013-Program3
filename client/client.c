@@ -1,6 +1,7 @@
+/* Kewen Gu & Preston Mueller, Program 3, CS3516 */
+
 #include <string.h>
 #include <stdio.h>
-
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -9,37 +10,22 @@
 
 #include "client.h"
 
-#define PACKET_SIZE sizeof(Packet)
+// Keep track of a global sequence number
+unsigned short global_seq_num = 0;
+// Used to simulate artificial transmission errors
+int error_generator = 0;
 
-#define END_OF_PHOTO_YES ((char)4)   // end of transmission
-#define END_OF_PHOTO_NO ((char)3)    // end of text
-
-#define END_OF_PACKET_YES ((char)4)  // end of transmission
-#define END_OF_PACKET_NO ((char)3)   // end of text
-
-#define DATALINK_EXPECTATION_ACK 1
-#define DATALINK_EXPECTATION_
-
-unsigned short seq_num = 0;
-
-void printBuffer(char* buffer, int n) {
-  for(int i = 0; i<n; i++)
-     printf("%x", buffer[i]);
-
-  printf("\n");
-}
-
-FILE* file2;
-
-int main(int argc, char** argv) {
-
-  file2 = fopen("test.jpg", "wb");
-
-	if(argc != 4) {
-
+/*
+Author: Preston Mueller
+	Main program to execute the client
+*/
+int main(int argc, char** argv) 
+{
+	/* Check the correct number of inputs */
+	if(argc != 4) 
+	{
 		printf("Usage: ./client <servermachine> <id> <num_photos>\n");
 		exit(1);
-
 	}
 
 	int clientID = atoi(argv[2]);
@@ -48,60 +34,64 @@ int main(int argc, char** argv) {
   FILE *file;
   int i, j, k;
 
-	//Pointer to socket structure that ends up filled in by gethostbyname
+  /* Pointer to socket structure that ends up filled in by gethostbyname */
 	struct hostent *servHost;
-	unsigned short port = WELLKNOWNPORT;
+	unsigned short port = PORT_NUMBER;
 	servHost = gethostbyname(argv[1]);
-	int sock = physical_Establish(servHost, port);
+	int sock = PhysicalEstablish(servHost, port);
 
-  if (send(sock, &clientID, sizeof(clientID), 0) < 0)
+  if (send(sock, &clientID, sizeof(clientID), 0) != sizeof(clientID))
     DieWithError("send() failed");
-  if (send(sock, &numPhotos, sizeof(numPhotos), 0) < 0)
+  if (send(sock, &numPhotos, sizeof(numPhotos), 0) != sizeof(numPhotos))
     DieWithError("send() failed");
 
-  //Packet memory allocation. First make space, then we can do the math for the packets easier
-  for(i = 0; i < numPhotos; i++) 
+  /* Packet memory allocation. First make space, then we can do the math for the packets easier */
+  for(i = 1; i <= numPhotos; i++) 
   {
+  	/* Specify file names for reading */
     sprintf(fileName, "photo%d%d.jpg", clientID, i);
     
     if((file = fopen(fileName, "rb")) == NULL) 
     {
       fprintf(stderr, "%s couldn't be found!\n", fileName);
+      close(sock);
       exit(1);
     }
 
-    printf("To application layer\n");
-    application_Layer(file, sock);
-    printf("Send %s to the server\n", fileName);
+    /* Go into the application layer */
+    ApplicationLayer(file, sock);
 
+    /* Close file after done reading */
     fclose(file);
   }
+  /* Close the sock after the operations are done */
+  printf("Done sending %d photos to the server\n", numPhotos);
+  close(sock);
 }
 
 
-void DieWithError(char *errorMsg)
+
+/*
+Arthor: Preston Mueller
+	This function establish connection between the client and the server,
+	it returns the socket descriptor
+*/
+int PhysicalEstablish(struct hostent* host, unsigned short port)
 {
-  perror(errorMsg);
-  exit(1);
-}
-
-
-int physical_Establish(struct hostent* host, unsigned short port) {
-
-  printf("Connecting to host on port %d\n", port);
+//  printf("Connecting to host on port %d\n", port);
 
 	struct sockaddr_in serverAddress;
   int sock;
 
-	  //Reset the struct
-  	memset(&serverAddress, 0, sizeof(serverAddress));
-  	serverAddress.sin_family = AF_INET;
+  //Reset the struct
+	memset(&serverAddress, 0, sizeof(serverAddress));
+	serverAddress.sin_family = AF_INET;
 
-  	//Copy the address from the gethostbyname struct into struct
-  	memcpy(&serverAddress.sin_addr.s_addr, host->h_addr_list[0], host->h_length);
+	//Copy the address from the gethostbyname struct into struct
+	memcpy(&serverAddress.sin_addr.s_addr, host->h_addr_list[0], host->h_length);
 
-  	//Convert the provided port to network byte order and assign to struct
-  	serverAddress.sin_port = htons(port);
+	//Convert the provided port to network byte order and assign to struct
+	serverAddress.sin_port = htons(port);
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     DieWithError("sock() failed");
@@ -109,264 +99,184 @@ int physical_Establish(struct hostent* host, unsigned short port) {
 	if(connect(sock, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) 
     DieWithError("connect() failed");
 
-  	return sock;
-
+  return sock;
 }
 
-
-void application_Layer(FILE *file, int sock)
+/*
+Arthor: Preston Mueller
+	This function is abstracted as the application layer.
+	It reads data from the file and put it into packets, 
+	and send each packet to the datalink layer.
+*/
+void ApplicationLayer(FILE *file, int sock)
 {
-  fseek(file, 0, SEEK_END);
-  int fileSize = ftell(file);
-  fseek(file, 0, SEEK_SET);
-
-  int numPackets = (fileSize / PACKET_SIZE) + (fileSize % PACKET_SIZE > 0 ? 1 : 0);
-
-  Packet *packets = malloc(numPackets * sizeof(Packet));
+  unsigned char packet[PACKET_SIZE];
 
   int bytesLoaded = 0;
-  int currentPacket = 0;
-  int currentPosition = 0;
-  int i;
+  int pos = 0;
+  int retval;
 
-  while(bytesLoaded < fileSize) {
-    // Read from JPEG file one byte at a time
-    fread(packets[currentPacket].data + currentPosition, 1, 1, file);
-
-    currentPosition++;
-    bytesLoaded++;
-    // Start filling a new packet after PACKET_SIZE bytes read
-    if(currentPosition == PACKET_SIZE) {
-      //packets[currentPacket].endOfPhoto = END_OF_PHOTO_NO; // Indicate not end-of-photo
-      currentPosition = 0;
-      currentPacket++;
-    }
-  }
-
-  //packets[numPackets - 1].endOfPhoto = END_OF_PHOTO_YES; // Indicate end-of-photo
   
-  for (i = 0; i < numPackets; i++)
-  {
-    printf("To datalink layer\n");
-    datalink_Layer(&packets[i], sizeof(packets[i]), sock);
-  }
+  while ((retval = fread(packet, 1, PACKET_SIZE - 1, file)) > 0)
+  {	
+		if (retval < PACKET_SIZE -  1)
+			packet[retval] = END_OF_PHOTO_YES;
+		else if (retval == PACKET_SIZE -  1)
+			packet[retval] = END_OF_PHOTO_NO;
 
-
-
+	  DatalinkLayer(packet, retval + 1, sock);
+  } 
 }
 
-// Put the payload into the frame
-void datalink_Layer(Packet *p, int packetSize, int sock)
+/*
+Author: Kewen Gu
+	This function is asbstracted as the datalink layer.
+	It converts packet to frames, send each frame to the physical layer,
+	and resend the frame when time out and incorrectly ACKed.
+*/
+void DatalinkLayer(unsigned char *packet, int packetSize, int sock)
 {
-
   // First, initialize the frame
-  int numFrames = (packetSize / FRAME_PAYLOAD_SIZE) + (packetSize % FRAME_PAYLOAD_SIZE > 0 ? 1 : 0);
-  Frame *frames = (Frame *)malloc(numFrames * sizeof(Frame));
+  int payloadLen = FRAME_SIZE - 6;
+  int numFrames = (packetSize / payloadLen) + (packetSize % payloadLen > 0 ? 1 : 0);
+  unsigned char frames[numFrames][FRAME_SIZE];
 
-  printf("numFrames: %d\n", numFrames);
-  
-  int currentFrame = 0;
-  int currentPosition = 0;
-  int bytesToFrame = 0;
-  int bytesFramed = 0;
-  int totalBytesFramed = 0;
-  int i;
+	unsigned char *errorCheck;
+  int pos = 0;
+  int i, j, frameSize, resendFlag;
 
-  int frame = 0;
-  int currentframepos = 0;
-
-  for(int i = 0; i < packetSize; i++) {
-
-    frames[frame].payload[currentframepos] = p->data[i];
-    currentframepos++;
-    if(currentframepos == FRAME_PAYLOAD_SIZE) {
-      frames[frame].payloadLen = FRAME_PAYLOAD_SIZE;
-      currentframepos = 0;
-      frame++;
-    }
-  }
-  /*
-  for(int i = 0; i < numFrames; i++) {
-
-    if(i < numFrames-1) {
-      //Frame has full payload
-      memcpy(frames[i].payload, p->data + currentPosition, FRAME_PAYLOAD_SIZE);
-      frames[i].endOfPacket = END_OF_PACKET_NO;
-      frames[i].frameType = FRAMETYPE_DATA;
-      frames[i].seqNum[0] = seq_num & 0xff00;
-      frames[i].seqNum[1] = seq_num & 0x00ff;
-
-      currentPosition += FRAME_PAYLOAD_SIZE;
-    }
-    else if(i == (numFrames-1)) {
-      memcpy(frames[i].payload, p->data + currentPosition, packetSize % FRAME_PAYLOAD_SIZE);
-      frames[i].endOfPacket = END_OF_PACKET_YES;
-
-      frames[i].frameType = FRAMETYPE_DATA;
-      frames[i].seqNum[0] = seq_num & 0xff00;
-      frames[i].seqNum[1] = seq_num & 0x00ff;
-
-      currentPosition += (packetSize % FRAME_PAYLOAD_SIZE);
-    }
-    
-
-    seq_num++;
-
-
-  }
-  */
-
-  
-  for(int i = 0; i < numFrames; i++) {
-    printf("To physical layer with frame #: %x %x\n", frames[i].seqNum[0], frames[i].seqNum[1]);
-    physical_Layer(&frames[i], sizeof(Frame), sock);
-  }
-
-  // Copy the packet into the frame payload
-  /*while(totalBytesFramed < packetSize)
+  for (i = 0; i < numFrames; i++)
   {
-    bytesFramed = 0;
-    
-    if (packetSize - totalBytesFramed > FRAME_PAYLOAD_SIZE)
-      bytesToFrame = FRAME_PAYLOAD_SIZE;
-    else
-      bytesToFrame = packetSize - totalBytesFramed;
+  	frames[i][0] = FRAME_TYPE_DATA;
+  	frames[i][1] = global_seq_num & 0xff00;
+  	frames[i][2] = global_seq_num & 0x00ff;
 
-    for(i = 0; i < bytesToFrame; i++)
-    {
-      //printf("iteration %d of %d\n", i, FRAME_PAYLOAD_SIZE);
-      //printf("currentPosition is %d and currentFrame is %d\n", currentPosition, currentFrame);
 
-      frames[currentFrame].payload[i] = p->data[currentPosition];
-      bytesFramed++;
-      currentPosition++;
-      // If reach the end-of-photo specifier
-      if(frames[currentFrame].payload[i] == END_OF_PHOTO_YES || frames[currentFrame].payload[i] == END_OF_PHOTO_NO)
-      {  
-        frames[currentFrame].endOfPacket = END_OF_PACKET_YES;
-        break;
-      }
-      
-    }
-    totalBytesFramed += bytesFramed;
+  	for (j = 3; j < (FRAME_SIZE - 3) && pos < packetSize; j++)
+  	{
+  		frames[i][j] = packet[pos];
+  		pos++;
+  	}
 
-    frames[currentFrame].frameType = FRAMETYPE_DATA;
-    frames[currentFrame].seqNum[0] = seq_num & 0xff00;
-    frames[currentFrame].seqNum[1] = seq_num & 0x00ff;
+  	if (pos == packetSize)
+  		frames[i][j] = END_OF_PACKET_YES;
+  	else
+  		frames[i][j] = END_OF_PACKET_NO;
 
-    
-    frames[currentFrame].endOfPacket = END_OF_PACKET_NO;
+  	frameSize = j + 3;
 
-    char *error_handling_result = error_Handling(frames[currentFrame], bytesFramed);
+  	errorCheck = ErrorHandling(frames[i], frameSize - 2);
+  	frames[i][j + 1] = errorCheck[0];
+  	frames[i][j + 2] = errorCheck[1];
+//  	printf("Frame errorDetect: %02x %02x\n", frames[i][frameSize - 2], frames[i][frameSize - 1]);
 
-    frames[currentFrame].errorDetect[0] = error_handling_result[0];
-    frames[currentFrame].errorDetect[1] = error_handling_result[1];
+		do {
+			resendFlag = PhysicalLayer(frames[i], frameSize, sock);
+		} while (resendFlag);
 
-    printf("To physical layer with frame #: %d\n", seq_num);
-    physical_Layer(&frames[currentFrame], FRAME_PAYLOAD_SIZE + 6, sock);
 
-    seq_num++;
-    currentFrame++;
-
+		if (global_seq_num == 255)
+			global_seq_num = 0;
+		else
+    	global_seq_num++;
   }
-
-  */
-
-  printf("Returning to application layer\n");
-
 }
 
-
-void physical_Layer(Frame* buffer, int frameSize, int sock) 
+/*
+Author: Kewen Gu
+	This function is abstracted as the physical layer.
+	It receives a frame from the datalink layer, send the frame
+	to the server, receive ACK from the server, and ask the datalink
+	layer to resend the packet if time out or incorrectly ACKed.
+*/
+int PhysicalLayer(unsigned char *frame, int frameSize, int sock)
 {
-  int timeOut = 1;
-  int notACKed = 1;
-  //FrameACK *ack = malloc(sizeof(FrameACK));
-  Frame *ack = malloc(sizeof(Frame));
-  ack->frameType = FRAMETYPE_ACK;
-  
-  struct timeval timer;
+	unsigned char newFrame[FRAME_SIZE];
+	unsigned char ack[ACK_SIZE];
+	int resendFlag = 0;  // either time out or ACK failed
+	int bytesRcvd = 0;
+//	int totalBytesRcvd = 0;
+	int retval;	
+	struct timeval timer;
 
   fd_set fileDescriptorSet;
   FD_ZERO(&fileDescriptorSet);
   FD_SET(sock, &fileDescriptorSet);
 
-  printf("Physical send: length is %d\n", frameSize);
+  memcpy(newFrame, frame, FRAME_SIZE);
 
-  while (timeOut)
-    while (notACKed)
+  if (error_generator % 6 == 5)
+  		newFrame[3] = 0x00;
+  error_generator++;
+
+//  printf("Send frame to server: frame size = %d\n", frameSize);
+  int n;
+  if ((n = send(sock, newFrame, frameSize, 0)) != frameSize)
+    DieWithError("send() error");
+
+  timer.tv_sec = 0;
+  timer.tv_usec = TIME_OUT_USECS;
+
+  retval = select(sock + 1, &fileDescriptorSet, NULL, NULL, &timer);
+  if (retval < 0)
+    DieWithError("select() failed");
+  
+  else if (retval)
+  {
+  
+    //There's data to receive
+//    do
+//		{
+			if ((bytesRcvd = recv(sock, ack + bytesRcvd, ACK_SIZE, 0)) < 0)
+				DieWithError("recv() failed");
+//			totalBytesRcvd += bytesRcvd;
+//		} while (bytesRcvd > 0);
+
+
+//    printf("Internal sequence number = %02x\n", global_seq_num);
+//    printf("ACK: %02x %02x %02x %02x %02x\n", ack[0], ack[1], ack[2], ack[3], ack[4]);
+
+    if (ack[0] != FRAME_TYPE_ACK || ack[1] != frame[1] || ack[2] != frame[2] || ack[3] != ack[1] || ack[4] != ack[2])
     {
-      if (send(sock, buffer, frameSize, 0) < 0)
-        DieWithError("send() error");
-      
-      timer.tv_sec = 3;
-      timer.tv_usec = 0;
-
-      printf("Start timer\n");
-      //Frame timer
-      if (select(sock + 1, &fileDescriptorSet, NULL, NULL, &timer) < 0)
-        DieWithError("select() failed");
-
-      if (timer.tv_sec == 0 && timer.tv_usec == 0) 
-      {
-        printf("Time out!\n");
-        timeOut = 1; // time out!
-        break;
-      }
-      else
-      {
-        printf("Receiving ACK\n");
-        timeOut = 0; // not time out!
-      
-        //There's data to receive
-        if (recv(sock, ack, sizeof(Frame), 0) < 0)
-          DieWithError("recv() failed");
-
-        printf("ACK received\n");
-
-        printf("seq_num = %x %x\n", buffer->seqNum[0], buffer->seqNum[1]);
-        printf("ack->seqNum = %x %x\n", ack->seqNum[0], ack->seqNum[1]);
-        printf("ack->errorDetect = %d\n", ack->errorDetect);
-
-        if(1)
-        //if (atoi(ack->seqNum) == seq_num && atoi(ack->errorDetect) == atoi(ack->seqNum))
-        {
-          notACKed = 0; // ACK successful!
-          break;
-        }
-        else
-        {
-          printf("ACK failed!\n");
-          notACKed = 1; // ACK failed!
-        }
-      }
+//    	printf("ACK failed\n");
+    	resendFlag = 1;
     }
+  }
+  else
+	{
+//    printf("Time out!\n");
+    resendFlag = 1;
+  }
 
-    printf("Sending frame successfully!\n");
-
+	return resendFlag;
 }
 
-/* Function generates the error detection bytes
-    how this work?
-        suppose the frame in hex representation is "00 01 02 03 04 05 06 07... [2 error detection bytes]"
-        then, error detection bytes = 00^02^04^06... + 01^03^05^07...  (^ is the operation of XOR, + is the operation of concatenation)
+/*
+Author: Preston Mueller
+	This function is used to generate the error detection bytes for the frames
 */
-char *error_Handling(Frame t, int size)
+unsigned char *ErrorHandling(unsigned char *frame, int len)
 {
   int i;
-  char *result = malloc(2 * sizeof(unsigned char));
+  unsigned char *result = malloc(2 * sizeof(unsigned char));
 
-  for (i = 0; i < (size - 2); i += 2) {
+  for (i = 0; i < (len - 2); i += 2)
+    result[0] = frame[i] ^ result[0];
 
-    result[0] = *(unsigned char *)&t ^ result[0];
-  }
-
-  for (i = 1; i < (size - 2); i += 2) {
-
-    result[1] = *(unsigned char *)&t ^ result[1];
-  }
+  for (i = 1; i < (len - 2); i += 2)
+    result[1] = frame[i] ^ result[1];
 
   return result;
 }
 
+/*
+Author: Kewen Gu
+	This function is used to exit from the program with the error message 
+	when an error occurs
+*/
+void DieWithError(char *errorMsg)
+{
+	perror(errorMsg);
+	exit(1);
+}
 
