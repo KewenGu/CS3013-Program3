@@ -29,7 +29,7 @@
 
 ## Discussions:
 
-*	The time of transmission depends on the procession speed of the machine as well as the size of the photo. The "time out" we are using right now is 300000 microseconds. It takes a fairly amount of time to transmit the photo from the client to the server. When we set the "time out" really low, the photo cannot be correctly transmitted. However, if sending from local to local, "time out" can be much lower. 
+*	The time of transmission depends on the processing speed of the machine as well as the size of the photo. The "time out" we are using right now is 300000 microseconds. It takes a fairly amount of time to transmit the photo from the client to the server. When we set the "time out" really low, the photo cannot be correctly transmitted. However, if sending from local to local, "time out" can be much lower. 
 
 *	The program works very well on our own machines(MAC OS). However, we do not have time to fully test it on the CCC machine. During our test on CCC, we run the server on CCC and send photos to it through the client on our local machine, or we run the client on CCC and send photos to the server on our local machine. The program works fine for some "time out" but not for the others. When we run both client and server on CCC, the program always fails and we cannot have enough time to fix this.
 
